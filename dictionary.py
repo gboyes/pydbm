@@ -795,7 +795,7 @@ dtype=self.atomGenTable[dtype].dictionaryType)
             self.atoms[inds]['k_mag'] *= 1./np.sqrt(np.sum(self.atoms[inds]['k_mag']**2))
 
 
-    def MP(self, signal, cmax, srr_thresh):
+    def mp(self, signal, cmax, srr_thresh):
         '''Matching pursuit designed to use a dictionary of instrument-specific harmonic atoms, where
            signal := signal to decompose
            cmax := maximum number of iterations
@@ -1224,7 +1224,8 @@ class SoundgrainDictionary(pydbm_.meta.Group, pydbm_.meta.IO, pydbm_.utils.Trans
         dtype = self.atoms.dtype.descr
         dtype.append(('mag', float))
 
-        M = np.zeros(cmax, dtype=dtype)
+        #M = np.zeros(cmax, dtype=dtype)
+        M = pydbm_.book.SoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
         
         #place to put model
         out = np.zeros(len(signal), dtype=float)
@@ -1262,13 +1263,13 @@ class SoundgrainDictionary(pydbm_.meta.Group, pydbm_.meta.IO, pydbm_.utils.Trans
             out[self.atoms['onset'][indx] : self.atoms['onset'][indx]+self.atoms['duration'][indx]] += atom * a
             
             #Store decomposition Values
-            M['type'][c_cnt] = 'soundgrain'
-            M['duration'][c_cnt] = self.atoms['duration'][indx]
-            M['onset'][c_cnt] = self.atoms['onset'][indx]
-            M['corpus_index'][c_cnt] = self.atoms['corpus_index'][indx]
-            M['file_index'][c_cnt] = self.atoms['file_index'][indx]
-            M['norm'][c_cnt] = self.atoms['norm'][indx]
-            M['mag'][c_cnt] = a
+            M.atoms['type'][c_cnt] = 'soundgrain'
+            M.atoms['duration'][c_cnt] = self.atoms['duration'][indx]
+            M.atoms['onset'][c_cnt] = self.atoms['onset'][indx]
+            M.atoms['corpus_index'][c_cnt] = self.atoms['corpus_index'][indx]
+            M.atoms['file_index'][c_cnt] = self.atoms['file_index'][indx]
+            M.atoms['norm'][c_cnt] = self.atoms['norm'][indx]
+            M.atoms['mag'][c_cnt] = a
 
             #Measure the change    
             srr = 10 * np.log10(linalg.norm(out)**2 / linalg.norm(signal)**2) 
@@ -1281,7 +1282,7 @@ class SoundgrainDictionary(pydbm_.meta.Group, pydbm_.meta.IO, pydbm_.utils.Trans
 
             c_cnt += 1
 
-        M = M[0:c_cnt]
+        M.atoms = M.atoms[0:c_cnt]
 
         return out, signal, M
 

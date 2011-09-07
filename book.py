@@ -322,4 +322,68 @@ class SpectralBook(pydbm_.utils.MiscUtils, Book):
         return out.T
 
             
+class SoundgrainBook(pydbm_.meta.Group, pydbm_.meta.IO):
 
+    def __init__(self, fs, SoundDatabase, maxnum):
+
+        pydbm_.meta.IO.__init__(self)
+        self.order = 1
+        self.sampleRate = fs
+        self.SoundDatabase = SoundDatabase
+        self.atoms = np.zeros(maxnum, dtype=self.atomGenTable['soundgrain'].bookType)
+        self.atoms['type'] = 'soundgrain'
+
+    def synthesize(self):
+        
+        out = np.zeros(max(self.atoms['onset'] + self.atoms['duration']))
+
+        for i in xrange(len(self.atoms)):
+            atom = self.readAudio(self.SoundDatabase.corpora[self.atoms['corpus_index'][i]].directory + '/' + self.SoundDatabase.corpora[self.atoms['corpus_index'][i]].soundfiles[self.atoms['file_index'][i]])[0] / self.atoms['norm'][i]
+            out[self.atoms['onset'][i] : self.atoms['onset'][i] + self.atoms['duration'][i]] += atom * self.atoms['mag'][i] 
+
+        return out
+
+
+    def writeSDIF(self, outpath, labeled=False):
+        '''Generate an sdif from a soundgrain analysis books'''
+        
+        f = pysdif.SdifFile('%s'%outpath, 'w')
+        f.add_NVT({'TableName' : 'FileInfo', 'date' : time.asctime(time.localtime()), 'sample rate' : self.sampleRate})
+
+        uc = np.unique(self.atoms['corpus_index'])
+
+        f.add_NVT(dict([('TableName', 'CorpusDirectories')] + zip([str(k) for k in uc], [C.directory for C in [self.SoundDatabase.corpora[c] for c in uc]])))
+
+        for c in uc:
+            ainds = np.where(self.atoms['corpus_index'] == c)[0]
+            finds = self.atoms['file_index'][ainds]
+            f.add_NVT(dict([('TableName', 'Corpus-%i'%c)] + zip([str(k) for k in finds], [self.SoundDatabase.corpora[c].soundfiles[k] for k in finds])))
+
+
+        f.add_frame_type('XADS', 'XSGM NewXSGM, XSLM NewXSLM')
+
+        self.atoms.sort(order='onset')
+
+        f.add_matrix_type('XSGM', 'onset, duration, corpus_index, file_index, norm, mag')
+        f.add_matrix_type('XSLM', 'onset, duration, corpus_index, file_index, norm, midicents, velocity, mag')
+
+        n = 0
+        while n < len(self.atoms['onset']):
+            t = self.atoms['onset'][n]
+            frame = f.new_frame('XADS', t /float(self.sampleRate))
+
+            c = 0
+            for ind in np.where(self.atoms['onset'] == t)[0]:
+                N = self.atoms[ind]
+
+                if not labeled:
+                    frame.add_matrix('XSGM', np.array([[N['onset'], N['duration'], N['corpus_index'], N['file_index'], N['norm'], N['mag']]]))
+                else:
+                    frame.add_matrix('XSLM', np.array([[N['onset'], N['duration'], N['corpus_index'], N['file_index'], N['norm'], N['midicents'], N['velocity'], N['mag']]]))
+
+                c += 1
+    
+            frame.write()
+            n += c
+        
+        f.close()
