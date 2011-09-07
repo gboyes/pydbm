@@ -6,7 +6,7 @@ import pydbm_.data
 import pydbm_.atom
 import pydbm_.utils
 
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import audiolab
 
 import scipy.fftpack as fftpack
@@ -33,7 +33,7 @@ out = H.window(size) * sig.lfilter([1.], coefs, h)
 
 I = sig.lfilter([1.], coefs, imp)
 
-'''
+
 plt.figure(0)
 plt.plot(20*np.log10(abs(fftpack.fft(I))/len(I))[0:len(I)/2])
 plt.show()
@@ -53,4 +53,3 @@ plt.plot(out)
 
 #plt.xlabel('time (s)')
 #plt.ylabel('frequency (Hz)')
-'''

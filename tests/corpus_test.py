@@ -2,7 +2,7 @@ import pydbm_.data
 import pydbm_.dictionary
 
 import numpy as np
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 corpus = '/Users/grahamboyes/Documents/Work/project_m/16khz/ordinario/SoftMallet/piano'
 

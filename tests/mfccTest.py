@@ -5,7 +5,7 @@ import pydbm_.meta
 import pydbm_.data
 import pydbm_.atom
 import pydbm_.utils
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import audiolab
 import scipy.fftpack as fftpack
 
@@ -30,9 +30,9 @@ while pin < pend:
      pin += hop
 
 
-#plt.figure(1)
-#plt.imshow(abs(CC), vmax=1., aspect='auto', origin='lower', cmap='Greys')
-#plt.colorbar()
+plt.figure(1)
+plt.imshow(abs(CC), vmax=1., aspect='auto', origin='lower', cmap='Greys')
+plt.colorbar()
 
-#plt.xlabel('time (s)')
-#plt.ylabel('frequency (Hz)')
+plt.xlabel('time (s)')
+plt.ylabel('frequency (Hz)')

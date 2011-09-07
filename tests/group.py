@@ -1,7 +1,7 @@
 import pydbm_.dictionary
 import numpy as np
 import numpy.lib.recfunctions as rfn
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import audiolab
 
 x, fs, p = audiolab.wavread('/Users/grahamboyes/Desktop/VibesMedium_7100-80.wav')

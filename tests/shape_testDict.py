@@ -6,7 +6,7 @@ import pydbm_.data
 import pydbm_.atom
 import pydbm_.utils
 
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import audiolab
 
 import pysdif
@@ -22,9 +22,9 @@ s1 = S.polygons[1]
 
 p = s1.getPolyHull(16000, 128, 2048)
 
-#plt.scatter(s1.polyHull['hop'], s1.polyHull['bin'])
-#plt.hold(True)
-#plt.scatter(s1.tfPoints['hop'], s1.tfPoints['bin'], c='r')
+plt.scatter(s1.polyHull['hop'], s1.polyHull['bin'])
+plt.hold(True)
+plt.scatter(s1.tfPoints['hop'], s1.tfPoints['bin'], c='r')
 
 D = pydbm_.dictionary.Dictionary(fs)
 

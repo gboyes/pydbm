@@ -10,7 +10,7 @@ import scipy.fftpack as fftpack
 import pysdif
 import audiolab
 import numpy.lib.recfunctions as rfn
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 import pydbm_.meta
 import pydbm_.utils
@@ -133,8 +133,8 @@ class Book(pydbm_.meta.Types, pydbm_.meta.Group, pydbm_.utils.TransUtils):
         if plot:
             p = plt.axes()
             p.imshow(W, interpolation=None, aspect='auto', origin='lower', cmap='Greys', extent=[0., np.shape(W)[1] * float(hop) / self.sampleRate, 0., 0.5 * self.sampleRate])
-            p.set_xlabel('Time (sec.)')
-            p.set_ylabel("Frequency (Hz.)")
+            p.set_xlabel('Time (s)')
+            p.set_ylabel("Frequency (Hz)")
 
         return W
 
