@@ -7,7 +7,7 @@ import audiolab
 x, fs, p = audiolab.wavread('/Users/grahamboyes/Documents/Work/project_m/harm_fof.wav')
 sdif = '/Users/grahamboyes/Documents/Work/project_m/harm_fof_shape.sdif'
 
-list_of_corpora = ['/Users/grahamboyes/Documents/Work/project_m/16khz/ordinario/SoftMallet/forte', '/Users/grahamboyes/Documents/Work/project_m/16khz/ordinario/HardMallet/forte']
+list_of_corpora = ['/Users/grahamboyes/Documents/Work/project_m/16khz/ordinario/Muted/forte', '/Users/grahamboyes/Documents/Work/project_m/16khz/ordinario/Muted/piano']
 
 Y = pydbm_.data.PolygonGroup(sdif)
 S = pydbm_.data.SoundDatabase(list_of_corpora)
@@ -20,5 +20,5 @@ for y in Y.polygons:
 x_ = np.zeros(len(x) + max(D.atoms['duration']))
 x_[0:len(x)] = x
 
-mod, res, M = D.mp2(x_.copy(), 30, 35)
+mod, res, M = D.mp(x_.copy(), 1000, 35)
 audiolab.wavwrite(mod, '/Users/grahamboyes/Desktop/prawn.wav', fs)

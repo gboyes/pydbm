@@ -1159,15 +1159,15 @@ class SoundgrainDictionary(pydbm_.meta.Group, pydbm_.meta.IO, pydbm_.utils.Trans
             z = np.zeros(len(C.soundfiles))
             select = np.array([])
 
-            #error check for a hop greater than the length of the sample somewhere
-
             for ind, name in enumerate(C.soundfiles):
 
                 y, fsa = self.readAudio(C.directory + '/' + name)
                 Y = self.stft(y, win, nbins, hop, w='hann')
-                Ry = Y[Poly.polyHull['bin'], Poly.polyHull['hop'] - min(Poly.polyHull['hop'])] 
 
-                Ysub_rms = np.sqrt( np.sum((2. * abs(Y[0:nbins/2, np.unique(Poly.polyHull['hop']) - min(Poly.polyHull['hop'])]) / win / cg)**2))
+                hull = Poly.polyHull[np.where(Poly.polyHull['hop'] - min(Poly.polyHull['hop']) < np.shape(Y)[1])[0]]
+                Ry = Y[hull['bin'], hull['hop'] - min(hull['hop'])] 
+
+                Ysub_rms = np.sqrt( np.sum((2. * abs(Y[0:nbins/2, np.unique(hull['hop']) - min(hull['hop'])]) / win / cg)**2))
                 Ry_ = 2. * abs(Ry) / win / cg
                 Ry_rms = np.sqrt( np.sum(Ry_**2)) 
                 locpercy = Ry_rms / Ysub_rms * 100

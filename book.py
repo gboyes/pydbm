@@ -10,7 +10,7 @@ import scipy.fftpack as fftpack
 import pysdif
 import audiolab
 import numpy.lib.recfunctions as rfn
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 import pydbm_.meta
 import pydbm_.utils
