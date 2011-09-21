@@ -1,10 +1,27 @@
+'''pydbm : a python library for dictionary-based methods 
+    Copyright (C) 2011 Graham Boyes
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+'''
+
 import os
 import re
 
 import pysdif
 import numpy as np
 import scipy.linalg as linalg
-import xml.etree.ElementTree as etree
+import xml.etree.ElementTree as etree 
 
 import pydbm_.meta
 import pydbm_.utils
@@ -199,20 +216,25 @@ class Corpus(pydbm_.meta.IO):
         self.soundfiles = []
         
         #get only the soundfiles, avoid anything else in the dir
-        d = os.listdir(self.directory)
+        #d = os.listdir(self.directory)
+
+        d = [q for q in os.listdir(self.directory) if q[0] != '.']
         self.fileDescriptors = np.zeros(len(d), dtype=[('file_index', int), ('length', int), ('sampleRate', int), ('norm', float)])
         
         i = 0
+        k = 0
         for ind, val in enumerate(d):
-            if not any([os.path.splitext(val)[1] == p for p in ['.aif', '.wav', '.aiff', '.au']]):
+
+            if not any([os.path.splitext(val)[1].lower() == p for p in ['.aif', '.wav', '.aiff', '.au']]):
                 continue
 
             x = self.readAudio(self.directory +'/'+ val)
-            self.fileDescriptors['file_index'][i] = ind
+            self.fileDescriptors['file_index'][i] = k
             self.fileDescriptors['length'][i] = len(x[0])
             self.fileDescriptors['sampleRate'][i] = x[1]
             self.fileDescriptors['norm'][i] = linalg.norm(x[0])
             i += 1
+            k += 1
 
             self.soundfiles.append(val)
         

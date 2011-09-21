@@ -1,3 +1,20 @@
+'''pydbm : a python library for dictionary-based methods 
+    Copyright (C) 2011 Graham Boyes
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+'''
+
 import time
 import re
 import os
@@ -1248,7 +1265,6 @@ class SoundgrainDictionary(pydbm_.meta.Group, pydbm_.meta.IO, pydbm_.utils.Trans
             for cnt in up_ind:
                 
                 atom = self.readAudio(self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].directory + '/' + self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].soundfiles[self.atoms['file_index'][cnt]])[0]  
-
                 #apply scalar to scalar rather than array for savings
                 a = np.inner(atom, signal[self.atoms['onset'][cnt]:self.atoms['onset'][cnt]+self.atoms['duration'][cnt]]) / self.atoms['norm'][cnt]
                 max_mag[cnt] = a    
