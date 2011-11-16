@@ -1,0 +1,8 @@
+import audiolab
+
+import pydbm_.dictionary
+import pydbm_.data
+import numpy as np
+
+target = '/Users/grahamboyes/Desktop/AMENS/AMEN.wav'
+outdir = '/Users/grahamboyes/Desktop'

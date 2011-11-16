@@ -1302,7 +1302,148 @@ class SoundgrainDictionary(pydbm_.meta.Group, pydbm_.meta.IO, pydbm_.utils.Trans
 
         return out, signal, M
 
+    def mp2(self, signal, cmax, srr_thresh, globscalar):
 
+        '''Experimental variant of MP that does not re-scale the samples'''
+
+        #initialize
+        dtype = self.atoms.dtype.descr
+        dtype.append(('mag', float))
+
+        #M = np.zeros(cmax, dtype=dtype)
+        M = pydbm_.book.SoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
+        
+        #place to put model
+        out = np.zeros(len(signal), dtype=float)
+
+        #place to hold analysis values
+        max_mag = np.zeros(len(self.atoms))
+        max_ind = np.zeros(len(self.atoms))
+        up_ind = np.arange(len(self.atoms))
+        max_scale = max(self.atoms['duration'])
+
+        #breaking conditions
+        start_norm = linalg.norm(signal)
+        srr = 0.
+        c_cnt = 0
+        start = 1.
+
+        while (c_cnt < cmax) and (srr <= srr_thresh):
+
+            print(c_cnt)
+
+            for cnt in up_ind:
+                
+                atom = self.readAudio(self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].directory + '/' + self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].soundfiles[self.atoms['file_index'][cnt]])[0]  
+                a = np.inner(atom * globscalar, signal[self.atoms['onset'][cnt]:self.atoms['onset'][cnt]+self.atoms['duration'][cnt]])
+                max_mag[cnt] = a    
+                
+            #get and remove maximally correlated atom
+            indx = np.argmax(max_mag)
+
+            a = max_mag[indx]
+            atom = self.readAudio(self.SoundDatabase.corpora[self.atoms['corpus_index'][indx]].directory + '/' + self.SoundDatabase.corpora[self.atoms['corpus_index'][indx]].soundfiles[self.atoms['file_index'][indx]])[0]  
+
+            signal[self.atoms['onset'][indx] : self.atoms['onset'][indx]+self.atoms['duration'][indx]] -= atom * globscalar
+            out[self.atoms['onset'][indx] : self.atoms['onset'][indx]+self.atoms['duration'][indx]] += atom * globscalar
+            
+            #Store decomposition Values
+            M.atoms['type'][c_cnt] = 'soundgrain'
+            M.atoms['duration'][c_cnt] = self.atoms['duration'][indx]
+            M.atoms['onset'][c_cnt] = self.atoms['onset'][indx]
+            M.atoms['corpus_index'][c_cnt] = self.atoms['corpus_index'][indx]
+            M.atoms['file_index'][c_cnt] = self.atoms['file_index'][indx]
+            M.atoms['norm'][c_cnt] = self.atoms['norm'][indx]
+            M.atoms['mag'][c_cnt] = a
+
+            #Measure the change    
+            srr = 10 * np.log10(linalg.norm(out)**2 / linalg.norm(signal)**2)
+            perc = linalg.norm(signal)**2 / start_norm**2
+            if perc > start:
+                break
+            start = perc
+  
+            print(linalg.norm(signal)**2 / start_norm**2)
+            print(srr)            
+
+            up_ind = np.intersect1d(np.where(self.atoms['onset'] >= self.atoms['onset'][indx] - max_scale)[0], np.where(self.atoms['onset'] < self.atoms['onset'][indx] + max_scale)[0]) 
+            max_mag[up_ind] = 0.
+
+            c_cnt += 1
+
+        M.atoms = M.atoms[0:c_cnt]
+
+        return out, signal, M
+
+    def mp_stereo(self, signal, cmax, srr_thresh):
+        '''Matching Pursuit for stereo sound grains'''
+
+        #initialize
+        dtype = self.atoms.dtype.descr
+        dtype.append(('mag', '2float'))
+
+        #M = np.zeros(cmax, dtype=dtype)
+        M = pydbm_.book.SoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
+        
+        #place to put model
+        out = np.zeros(len(signal), dtype=float)
+
+        #place to hold analysis values
+        max_mag = np.zeros(len(self.atoms), dtype='2float')
+        max_ind = np.zeros(len(self.atoms))
+        up_ind = np.arange(len(self.atoms))
+        max_scale = max(self.atoms['duration'])
+
+        #breaking conditions
+        start_norm = linalg.norm(signal)
+        srr = 0.
+        c_cnt = 0
+
+        while (c_cnt < cmax) and (srr <= srr_thresh):
+
+            print(c_cnt)
+
+            for cnt in up_ind:
+                
+                atom = self.readAudio(self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].directory + '/' + self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].soundfiles[self.atoms['file_index'][cnt]])[0]  
+
+                for chan in (0, 1):
+
+                    a = np.inner(atom[0:, chan], signal[self.atoms['onset'][cnt]:self.atoms['onset'][cnt]+self.atoms['duration'][cnt], chan]) / self.atoms['norm'][cnt]
+                    max_mag[cnt][chan] = a    
+                
+            #get and remove maximally correlated atom
+            indx = np.argmax(np.sum(max_mag, axis=1))
+
+            a = max_mag[indx]
+            atom = self.readAudio(self.SoundDatabase.corpora[self.atoms['corpus_index'][indx]].directory + '/' + self.SoundDatabase.corpora[self.atoms['corpus_index'][indx]].soundfiles[self.atoms['file_index'][indx]])[0]  / self.atoms['norm'][indx]  
+
+            signal[self.atoms['onset'][indx] : self.atoms['onset'][indx]+self.atoms['duration'][indx]] -= atom * a
+            out[self.atoms['onset'][indx] : self.atoms['onset'][indx]+self.atoms['duration'][indx]] += atom * a
+            
+            #Store decomposition Values
+            M.atoms['type'][c_cnt] = 'soundgrain'
+            M.atoms['duration'][c_cnt] = self.atoms['duration'][indx]
+            M.atoms['onset'][c_cnt] = self.atoms['onset'][indx]
+            M.atoms['corpus_index'][c_cnt] = self.atoms['corpus_index'][indx]
+            M.atoms['file_index'][c_cnt] = self.atoms['file_index'][indx]
+            M.atoms['norm'][c_cnt] = self.atoms['norm'][indx]
+            M.atoms['mag'][c_cnt] = a
+
+            #Measure the change    
+            srr = 10 * np.log10(linalg.norm(out)**2 / linalg.norm(signal)**2) 
+            print(a**2 / start_norm**2)
+            print(linalg.norm(signal)**2 / start_norm**2)
+            print(srr)            
+
+            up_ind = np.intersect1d(np.where(self.atoms['onset'] >= self.atoms['onset'][indx] - max_scale)[0], np.where(self.atoms['onset'] < self.atoms['onset'][indx] + max_scale)[0]) 
+            max_mag[up_ind] = 0.
+
+            c_cnt += 1
+
+        M.atoms = M.atoms[0:c_cnt]
+
+        return out, signal, M
 
         
 
