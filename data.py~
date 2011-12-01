@@ -1,8 +1,27 @@
+'''pydbm : a python library for dictionary-based methods 
+    Copyright (C) 2011 Graham Boyes
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+'''
+
 import os
 import re
 
+import pysdif
 import numpy as np
-import xml.etree.ElementTree as etree
+import scipy.linalg as linalg
+import xml.etree.ElementTree as etree 
 
 import pydbm_.meta
 import pydbm_.utils
@@ -30,7 +49,7 @@ class InstrumentSubspace(pydbm_.meta.IO, pydbm_.meta.Spectral, pydbm_.utils.Misc
            window := window function to be used, these are taken from the atom generator objects
            winargs := any window specific arguments'''
 
-        dtype = [('scale', int), ('omega', float), ('amplitude', float), ('phase', float)]
+        dtype = [('duration', int), ('omega', float), ('amplitude', float), ('phase', float)]
         self.envelopes = {}# a midicents (pitch class) to list of envelope structured arrays look up table
 
         for corpus in trainingCorpora:
@@ -92,7 +111,7 @@ class InstrumentSubspace(pydbm_.meta.IO, pydbm_.meta.Spectral, pydbm_.utils.Misc
                     env['omega'] = f[i]
                     env['amplitude'] = a[i]
                     env['phase'] = p[i]
-                    env['scale'] = W
+                    env['duration'] = W
 
                     self.envelopes[midi].append(env)
                                                                                  
@@ -108,8 +127,8 @@ class InstrumentSubspace(pydbm_.meta.IO, pydbm_.meta.Spectral, pydbm_.utils.Misc
                 array['omega'] = np.round(array['omega'], dec)
 
             u = reduce(np.union1d, [a['omega'] for a in self.envelopes[k]])
-            env = np.zeros(len(u), dtype=[('scale', int), ('omega', float), ('amplitude', float), ('phase', float)])
-            env['scale'] = self.envelopes[k][0]['scale'][0]
+            env = np.zeros(len(u), dtype=[('duration', int), ('omega', float), ('amplitude', float), ('phase', float)])
+            env['duration'] = self.envelopes[k][0]['duration'][0]
 
             for omi, om in enumerate(u):
                 b = [np.where(a['omega'] == om)[0] for a in self.envelopes[k]]
@@ -169,57 +188,61 @@ class InstrumentSubspace(pydbm_.meta.IO, pydbm_.meta.Spectral, pydbm_.utils.Misc
     '''
 
 
-#Corpus object        
+#Sound database and Corpus objects        
 ######################################################################################################
-class Corpus(pydbm_.meta.IO):
+class SoundDatabase(pydbm_.meta.IO):
 
     def __init__(self, list_of_corpora):
-        IO.__init__(self)
-        self.corpora = list_of_corpora
+        pydbm_.meta.IO.__init__(self)
+        self.corpora = [Corpus(k) for k in list_of_corpora]
+        
+    def num(self):
+        sum([C.num() for C in self.corpora]) 
+
+class Corpus(pydbm_.meta.IO):
+
+    def __init__(self, directory):
+        pydbm_.meta.IO.__init__(self)
+        self.directory = directory
+        self.getSoundfiles()
+     
+        #here it would be good to define desriptor types such that a number of descriptors could be obtained at run time
+
+    def num(self):
+        return len(self.soundfiles)
+
+    def getSoundfiles(self):
+        
         self.soundfiles = []
         
         #get only the soundfiles, avoid anything else in the dir
-        for k in self.corpora:
-            d = os.listdir(k)
-            t = []
-            for ind, val in enumerate(d):
-                if not any([os.path.splitext(val)[1] == p for p in ['.aif', '.wav', '.aiff', '.au']]):
-                    continue
-                t.append(val)
-            
-            self.soundfiles.append(t)
+        #d = os.listdir(self.directory)
 
-        self.cardinality = [len(k) for k in self.soundfiles]
+        d = [q for q in os.listdir(self.directory) if q[0] != '.']
+        self.fileDescriptors = np.zeros(len(d), dtype=[('file_index', int), ('length', int), ('sampleRate', int), ('norm', float)])
         
-    def getFileDescriptors(self):
-        '''Fill database of file descriptors about for a sound corpus'''
-
-        self.fileDescriptors = {'corpus_index' : np.zeros(sum(self.cardinality), dtype=int),
-                                'file_index' : np.zeros(sum(self.cardinality), dtype=int),
-                                'length' : np.zeros(sum(self.cardinality), dtype=int),
-                                'sampleRate' : np.zeros(sum(self.cardinality), dtype=int)}
- 
         i = 0
-        c_c = 0
-        for c in self.soundfiles:
+        k = 0
+        for ind, val in enumerate(d):
 
-            f_c = 0
-            for f in c:
-                x = self.readAudio(self.corpora[c_c] +'/'+ f)
+            if not any([os.path.splitext(val)[1].lower() == p for p in ['.aif', '.wav', '.aiff', '.au']]):
+                continue
 
-                #get some stats here!
-                self.fileDescriptors['corpus_index'][i] = c_c
-                self.fileDescriptors['file_index'][i] = f_c
-                self.fileDescriptors['length'][i] = len(x[0])
-                self.fileDescriptors['sampleRate'][i] = x[1]
-                
-                i += 1
-                f_c += 1
+            x = self.readAudio(self.directory +'/'+ val)
+            self.fileDescriptors['file_index'][i] = k
+            self.fileDescriptors['length'][i] = len(x[0])
+            self.fileDescriptors['sampleRate'][i] = x[1]
+            self.fileDescriptors['norm'][i] = linalg.norm(x[0])
+            i += 1
+            k += 1
 
-            c_c += 1
+            self.soundfiles.append(val)
+        
+        self.fileDescriptors = self.fileDescriptors[0:i]
 
+    
     def getSignalDescriptors(self):
-        '''Fill a database with signal descriptors for a sound corpus'''
+        #'''Fill a database with signal descriptors for a sound corpus'''
         #idea: user should be able to give a list of built-in descriptor types
 
         self.signalDescriptors = {'norm' : np.zeros(sum(self.cardinality), dtype=float)}
@@ -255,6 +278,7 @@ class Corpus(pydbm_.meta.IO):
                 self.labelDescriptors['velocity'][i] = eval(v.group())
 
                 i += 1
+      
 
 #Partial helper classes#
 ########################
@@ -315,6 +339,123 @@ class Partial(pydbm_.meta.IO):
     def __init__(self, index, array): 
         self.index = index
         self.array = array
+
+
+class PolygonGroup(pydbm_.meta.IO):
+    
+    def __init__(self, sdif_in):
+        self.polygons = []
+        self.readSdif(sdif_in)
+
+    def readSdif(self, sdif_in):
+        
+        sdif_file = pysdif.SdifFile(sdif_in)
+        
+        for frame in sdif_file:
+
+            P = Polygon()
+            P.readFrame(frame)
+            self.polygons.append(P)
+
+class Polygon(object):
+
+    def __init__(self):
+
+        self.matrix_types = ['clss', 'dura', 'freq', 'pnts']
+        
+    def readFrame(self, sdif_frame):
+        '''Read an SDIF 1ASO frame and format its data, sets many useful attributes'''
+
+        self.time = sdif_frame.time
+        self.getParams(sdif_frame)
+        self.polygonClass = ''.join(chr(i) for i in self.params['clss'][0])
+        
+        #if it's a polygon (with pnts)
+        if 'pnts' in self.params.keys():
+           self.points = np.zeros(len(self.params['pnts']), dtype=[('time', float), ('frequency', float)])
+           for i, a in enumerate(self.params['pnts']):
+               self.points[i]['time'] = a[0]
+               self.points[i]['frequency'] = a[1]
+
+        #if it's a rectangle
+        else:
+            self.points = np.zeros(4, dtype=[('time', float), ('frequency', float)])
+            c = 0
+            for t in [self.time, self.time + self.params['dura'][0]]:
+                for f in self.params['freq'][0]:
+                    self.points[c]['time'] = t 
+                    self.points[c]['frequency'] = f
+                    c += 1
+
+    def getParams(self, sdif_frame):
+        '''Format params of a sdif_frame'''
+
+        self.params = {} 
+
+        for matrix in sdif_frame:
+
+            for ind, ts in enumerate(self.matrix_types):
+
+                if matrix.signature == ts:
+                    self.params[ts] = matrix.get_data().copy()
+
+    def pip(self, x, y):
+        '''Test whether a point is inside a polygon'''
+
+        n = len(self.tfPoints)
+        inside = False
+
+        p1x,p1y = self.tfPoints[0]
+        for i in range(n+1):
+            p2x,p2y = self.tfPoints[i % n]
+            if y > min(p1y,p2y):
+                if y <= max(p1y,p2y):
+                    if x <= max(p1x,p2x):
+                        if p1y != p2y:
+                            xinters = (y-p1y)*(p2x-p1x)/(p2y-p1y)+p1x
+                        if p1x == p2x or x <= xinters:
+                            inside = not inside
+            p1x, p1y = p2x, p2y
+
+        return inside
+
+    def getPolyHull(self, fs, hop, fftsize):
+        '''Get the coordinates of points that fall within the polygon for a hypothetical TF grid'''
+
+        #snap polygon points to a hypothetical TF grid, i.e. (sec, Hz) => (hop, bin)
+        self.tfPoints = np.zeros(len(self.points), dtype=[('hop', int), ('bin', int)])
+
+        u = 1./fftsize
+        self.tfPoints['hop'] = np.floor(self.points['time'] * fs / hop)
+        self.tfPoints['bin'] = np.round(self.points['frequency'] / fs / u)
+
+        min_t = min(self.tfPoints['hop'])
+        min_f = min(self.tfPoints['bin'])
+        max_t = max(self.tfPoints['hop'])
+        max_f = max(self.tfPoints['bin'])
+
+        self.polyHull = np.zeros((max_t+1 - min_t) * (max_f+1 - min_f), dtype=[('hop', int), ('bin', int)])
+        
+        #if it's a rectangle, things are very easy...
+        if self.polygonClass == 'Rflt' :
+            i = 0
+            for x in np.arange(min_t, max_t+1):
+                for y in np.arange(min_f, max_f+1):
+                    self.polyHull[i]['hop'] = x
+                    self.polyHull[i]['bin'] = y
+                    i+=1 
+
+        #otherwise, a 'free' polygon
+        else:
+            i = 0
+            for x in np.arange(min_t, max_t+1):
+                for y in np.arange(min_f, max_f+1):
+                    if self.pip(x, y):
+                        self.polyHull[i]['hop'] = x
+                        self.polyHull[i]['bin'] = y
+                        i+=1   
+            self.polyHull = np.unique(np.union1d(self.polyHull[0:i], self.tfPoints))
+
 
 
 #the 'symbolic' (i.e. score-based') classes#

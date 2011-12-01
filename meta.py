@@ -25,11 +25,11 @@ import scipy.fftpack as fftpack
 import scipy.linalg as linalg
 import numpy.lib.recfunctions as rfn
 
-import audiolab
+import scikits.audiolab
 import pysdif
 
-import pydbm_.atom
-import pydbm_.utils
+import pydbm.atom
+import pydbm.utils
 
 #Type management#
 #################
@@ -41,7 +41,7 @@ class Types(object):
 
         #automatically get relevant atom generating objects from the atom module and store the instatiated object in a lookup table
         #important to note that they are only instantiated prior to (and not during) the decomposition
-        self.atomGenTable = dict( [(a.type, a) for a in [a_[1]() for a_ in inspect.getmembers(pydbm_.atom, inspect.isclass) if 'type' in a_[1]().__dict__.keys()]])
+        self.atomGenTable = dict( [(a.type, a) for a in [a_[1]() for a_ in inspect.getmembers(pydbm.atom, inspect.isclass) if 'type' in a_[1]().__dict__.keys()]])
         self.atomTypes = self.atomGenTable.keys()
         self.atomGenObjects = self.atomGenTable.values()
 
@@ -121,16 +121,16 @@ class IO(Types):
 
         Types.__init__(self)
         
-        self.informats = {'.wav' : audiolab.wavread,
-                   '.aiff' : audiolab.aiffread, '.aif' : audiolab.aiffread,
-                   '.au' : audiolab.auread}
+        self.informats = {'.wav' : scikits.audiolab.wavread,
+                   '.aiff' : scikits.audiolab.aiffread, '.aif' : scikits.audiolab.aiffread,
+                   '.au' : scikits.audiolab.auread}
 
-        self.outformats = {'.wav' : audiolab.wavwrite,
-                   '.aiff' : audiolab.aiffwrite, '.aif' : audiolab.aiffwrite,
-                   '.au' : audiolab.auwrite}
+        self.outformats = {'.wav' : scikits.audiolab.wavwrite,
+                   '.aiff' : scikits.audiolab.aiffwrite, '.aif' : scikits.audiolab.aiffwrite,
+                   '.au' : scikits.audiolab.auwrite}
 
     def readAudio(self, path):
-        '''General wrapper for audiolab read functions
+        '''General wrapper for scikits.audiolab read functions
            path := path to file'''
 
         f = os.path.splitext(path)
@@ -139,7 +139,7 @@ class IO(Types):
         return a[0], a[1] 
 
     def writeAudio(self, x, path, fs, format='.aiff'):
-        '''General wrapper for audiolab write functions
+        '''General wrapper for scikits.audiolab write functions
            x := signal
            path := path to new file
            fs := sample rate
@@ -150,7 +150,7 @@ class IO(Types):
     def sdif2array(self, sdif_in, type_string_list):
         '''Make an SDIF file into a python dictionary of ndarrays separated by matrix type
            sdif_in := SDIF file to read
-           type_string_list := SDIF matrix types to be extracted (these need to be defined in pydbm_.data.Type.sdifTypes_in)''' 
+           type_string_list := SDIF matrix types to be extracted (these need to be defined in pydbm.data.Type.sdifTypes_in)''' 
 
         sdif_file = pysdif.SdifFile(sdif_in)
         data = [[] for k in type_string_list]

@@ -23,14 +23,14 @@ import numpy as np
 import scipy.linalg as linalg
 import xml.etree.ElementTree as etree 
 
-import pydbm_.meta
-import pydbm_.utils
+import pydbm.meta
+import pydbm.utils
 
 
 #Class for to obtain and store information related to a particular instrument subspace#
 #######################################################################################
 
-class InstrumentSubspace(pydbm_.meta.IO, pydbm_.meta.Spectral, pydbm_.utils.MiscUtils):
+class InstrumentSubspace(pydbm.meta.IO, pydbm.meta.Spectral, pydbm.utils.MiscUtils):
     '''Class for data related a particular instrument subspace'''
 
     def __init__(self, fs, instrument):
@@ -190,19 +190,19 @@ class InstrumentSubspace(pydbm_.meta.IO, pydbm_.meta.Spectral, pydbm_.utils.Misc
 
 #Sound database and Corpus objects        
 ######################################################################################################
-class SoundDatabase(pydbm_.meta.IO):
+class SoundDatabase(pydbm.meta.IO):
 
     def __init__(self, list_of_corpora):
-        pydbm_.meta.IO.__init__(self)
+        pydbm.meta.IO.__init__(self)
         self.corpora = [Corpus(k) for k in list_of_corpora]
         
     def num(self):
         sum([C.num() for C in self.corpora]) 
 
-class Corpus(pydbm_.meta.IO):
+class Corpus(pydbm.meta.IO):
 
     def __init__(self, directory):
-        pydbm_.meta.IO.__init__(self)
+        pydbm.meta.IO.__init__(self)
         self.directory = directory
         self.getSoundfiles()
      
@@ -283,11 +283,11 @@ class Corpus(pydbm_.meta.IO):
 #Partial helper classes#
 ########################
 
-class PartialModel(pydbm_.meta.IO):
+class PartialModel(pydbm.meta.IO):
     '''A class which contains a set of partials and methods to treat them'''
 
     def __init__(self, sdifpath):
-        pydbm_.meta.IO.__init__(self)
+        pydbm.meta.IO.__init__(self)
         self.partialModel = self.sdif2array(sdifpath, ['1TRC'])['1TRC']
         self.getPartials()
 
@@ -333,7 +333,7 @@ class PartialModel(pydbm_.meta.IO):
 
         return so
 
-class Partial(pydbm_.meta.IO):
+class Partial(pydbm.meta.IO):
     '''A Partial object'''
 
     def __init__(self, index, array): 
@@ -341,7 +341,7 @@ class Partial(pydbm_.meta.IO):
         self.array = array
 
 
-class PolygonGroup(pydbm_.meta.IO):
+class PolygonGroup(pydbm.meta.IO):
     
     def __init__(self, sdif_in):
         self.polygons = []
@@ -551,11 +551,11 @@ class Score(object):
 
 #Class for a particular sound target (stores metadata)
 ######################################################################################################
-class Target(pydbm_.meta.IO):
+class Target(pydbm.meta.IO):
     '''Class for an analysis target'''
 
     def __init__(self, inpath):
-        pydbm_.meta.IO.__init__(self)
+        pydbm.meta.IO.__init__(self)
         self.inpath = inpath
         self.name = os.path.basename(self.inpath)
         self.format = os.path.splitext(self.name)[1]

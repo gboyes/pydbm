@@ -29,17 +29,17 @@ import audiolab
 import numpy.lib.recfunctions as rfn
 #import matplotlib.pyplot as plt
 
-import pydbm_.meta
-import pydbm_.utils
+import pydbm.meta
+import pydbm.utils
 
 #idea: deal with statistics of atoms?  Assume a model is a distribution of elements with mean std etc.
 
-class Book(pydbm_.meta.Types, pydbm_.meta.Group, pydbm_.utils.TransUtils):
+class Book(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.TransUtils):
 
     '''Time-Frequency synthesis Book'''
 
     def __init__(self, maxnum, dtype, fs):
-        pydbm_.meta.Types.__init__(self)
+        pydbm.meta.Types.__init__(self)
         self.order = 1
         self.sdifType = 'XBOK'
         self.sampleRate = fs
@@ -234,11 +234,11 @@ class Book(pydbm_.meta.Types, pydbm_.meta.Group, pydbm_.utils.TransUtils):
 
 #a book of quasi-harmonically related atoms (components of structures)
 
-class SpectralBook(pydbm_.utils.MiscUtils, Book):
+class SpectralBook(pydbm.utils.MiscUtils, Book):
     '''A synthesis book with a description of spectral structures'''
 
     def __init__(self, maxnum, dtype, fs):
-        pydbm_.meta.Types.__init__(self)
+        pydbm.meta.Types.__init__(self)
         self.order = 2
         self.sdifType = 'XHBK'
         self.sampleRate = fs
@@ -339,11 +339,11 @@ class SpectralBook(pydbm_.utils.MiscUtils, Book):
         return out.T
 
             
-class SoundgrainBook(pydbm_.meta.Group, pydbm_.meta.IO):
+class SoundgrainBook(pydbm.meta.Group, pydbm.meta.IO):
 
     def __init__(self, fs, SoundDatabase, maxnum):
 
-        pydbm_.meta.IO.__init__(self)
+        pydbm.meta.IO.__init__(self)
         self.order = 1
         self.sampleRate = fs
         self.SoundDatabase = SoundDatabase

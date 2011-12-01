@@ -29,22 +29,21 @@ import scipy.cluster.vq as vq
 import pysdif
 import numpy.lib.recfunctions as rfn
 
-import pydbm_.meta
-import pydbm_.atom
-import pydbm_.data
-import pydbm_.book
-import pydbm_.utils
+import pydbm.meta
+import pydbm.atom
+import pydbm.data
+import pydbm.book
+import pydbm.utils
 
-#global note: indices work from the top down
 
 #most basic dictionary#
 #######################
 
-class Dictionary(pydbm_.meta.Types, pydbm_.meta.Group, pydbm_.utils.MiscUtils):
+class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.MiscUtils):
     '''Time-frequency analysis dictionary'''
 
     def __init__(self, fs):
-        pydbm_.meta.Types.__init__(self)
+        pydbm.meta.Types.__init__(self)
         self.order = 1
         self.sdifType = 'XDIC'
         self.sampleRate = fs
@@ -330,7 +329,7 @@ class Dictionary(pydbm_.meta.Types, pydbm_.meta.Group, pydbm_.utils.MiscUtils):
         dtype.append(('mag', float))
         dtype.append(('phase', float))
         
-        B = pydbm_.book.Book(cmax, dtype, self.sampleRate)
+        B = pydbm.book.Book(cmax, dtype, self.sampleRate)
 
         #place to put model
         out = np.zeros(len(signal), dtype=float)
@@ -418,7 +417,7 @@ class Dictionary(pydbm_.meta.Types, pydbm_.meta.Group, pydbm_.utils.MiscUtils):
         dtype.append(('phase', float))
         #dtype.append(('norm', float))
         
-        B = pydbm_.book.Book(cmax, dtype, self.sampleRate)
+        B = pydbm.book.Book(cmax, dtype, self.sampleRate)
 
         #place to put model
         out = np.zeros(len(signal), dtype=float)
@@ -511,10 +510,10 @@ class Dictionary(pydbm_.meta.Types, pydbm_.meta.Group, pydbm_.utils.MiscUtils):
 #Spectral Dictionary#
 #####################
 
-class SpecDictionary(Dictionary, pydbm_.meta.Spectral, pydbm_.utils.MiscUtils):
+class SpecDictionary(Dictionary, pydbm.meta.Spectral, pydbm.utils.MiscUtils):
 
     def __init__(self, fs):
-        pydbm_.meta.Spectral.__init__(self)
+        pydbm.meta.Spectral.__init__(self)
         self.order = 2
         self.sdifType = 'XSDI'
         self.sampleRate = fs
@@ -555,7 +554,7 @@ class SpecDictionary(Dictionary, pydbm_.meta.Spectral, pydbm_.utils.MiscUtils):
         dtype.append(('mag', float))
         dtype.append(('phase', float))
 
-        book = pydbm_.book.SpectralBook(cmax * maxPeaks, dtype, self.sampleRate)
+        book = pydbm.book.SpectralBook(cmax * maxPeaks, dtype, self.sampleRate)
 
         out = np.zeros(len(signal))
 
@@ -753,7 +752,7 @@ class SpecDictionary(Dictionary, pydbm_.meta.Spectral, pydbm_.utils.MiscUtils):
 #Instrument-Specific Dictionaries#
 ##################################
 
-class InstrumentDictionary(pydbm_.data.InstrumentSubspace, Dictionary):
+class InstrumentDictionary(pydbm.data.InstrumentSubspace, Dictionary):
 
     '''Class to build a dictionary of instrument-specific atoms with pursuits that consider these structures'''
 
@@ -824,7 +823,7 @@ dtype=self.atomGenTable[dtype].dictionaryType)
         dtype.append(('phase', float))
         dtype.append(('norm', float))
         
-        B = pydbm_.book.Book(cmax * np.max(self.atoms['index'][0]) + 1, dtype, self.sampleRate)
+        B = pydbm.book.Book(cmax * np.max(self.atoms['index'][0]) + 1, dtype, self.sampleRate)
 
         #place to put model
         out = np.zeros(len(signal))
@@ -942,13 +941,13 @@ dtype=self.atomGenTable[dtype].dictionaryType)
 
 #Block Dictionaries#
 ####################
-#remove this, add the functionality to regular dictionary
+#remove this, add the functionality to regular dictionary?
 
-class Block(pydbm_.meta.Types):
+class Block(pydbm.meta.Types):
     '''A high-level object describing a set of atoms with homogenous window parameters and varying time-frequency support defined by onsets and omegas'''
  
     def __init__(self, dtype, scale, chirp, omegas, onsets, **winargs):
-        pydbm_.meta.Types.__init__(self)
+        pydbm.meta.Types.__init__(self)
 
         self.dtype = dtype
         self.scale = scale
@@ -969,12 +968,12 @@ class Block(pydbm_.meta.Types):
         self.genargs = [winargs[key] for key in [k for k in self.AtomGen.genargs if k not in ['duration', 'omega', 'chirp']]]
         self.gen = lambda phi, omega : self.AtomGen.gen(phi, self.scale, omega, chirp, *self.genargs)
 
-class BlockDictionary(pydbm_.meta.Types, pydbm_.utils.MiscUtils):
+class BlockDictionary(pydbm.meta.Types, pydbm.utils.MiscUtils):
 
     '''a 'higher-level' setting of a dictionary ''' 
 
     def __init__(self, fs):
-        pydbm_.meta.Types.__init__(self)
+        pydbm.meta.Types.__init__(self)
         self.sampleRate = fs
         self.blocks = []
         self.dtype = []
@@ -1044,7 +1043,7 @@ class BlockDictionary(pydbm_.meta.Types, pydbm_.utils.MiscUtils):
         #dtype.append(('norm', float))
         
         #the synthesis book
-        book = pydbm_.book.Book(cmax, dtype, self.sampleRate)
+        book = pydbm.book.Book(cmax, dtype, self.sampleRate)
         
         #place to put model
         out = np.zeros(len(signal), dtype=float)
@@ -1139,12 +1138,12 @@ class BlockDictionary(pydbm_.meta.Types, pydbm_.utils.MiscUtils):
 
         return out, signal, book
         
-class SoundgrainDictionary(pydbm_.meta.Group, pydbm_.meta.IO, pydbm_.utils.TransUtils):
+class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.TransUtils):
 
     '''Dictionary for corpus-based synthesis'''
 
     def __init__(self, fs, SoundDatabase):
-        pydbm_.meta.IO.__init__(self)
+        pydbm.meta.IO.__init__(self)
 
         self.sampleRate = fs
         self.SoundDatabase = SoundDatabase
@@ -1160,7 +1159,7 @@ class SoundgrainDictionary(pydbm_.meta.Group, pydbm_.meta.IO, pydbm_.utils.Trans
         Poly.getPolyHull(self.sampleRate, hop, nbins)
         cg = 0.49951171875
         onset = min(Poly.polyHull['hop']) * hop
-        dtype = pydbm_.atom.SoundgrainGen().dictionaryType
+        dtype = pydbm.atom.SoundgrainGen().dictionaryType
 
         X = self.stft(signal, win, nbins, hop, w='hann')
         R = X[Poly.polyHull['bin'], Poly.polyHull['hop']]
@@ -1215,7 +1214,7 @@ class SoundgrainDictionary(pydbm_.meta.Group, pydbm_.meta.IO, pydbm_.utils.Trans
         '''add a Corpus to the dictonary at specific onsets'''
 
         N = np.array(onsets)
-        dtype = pydbm_.atom.SoundgrainGen().dictionaryType
+        dtype = pydbm.atom.SoundgrainGen().dictionaryType
         da = np.zeros(self.SoundDatabase.corpora[corpus_index].num() * len(N), dtype)
         da['type'] = 'soundgrain'
 
@@ -1242,7 +1241,7 @@ class SoundgrainDictionary(pydbm_.meta.Group, pydbm_.meta.IO, pydbm_.utils.Trans
         dtype.append(('mag', float))
 
         #M = np.zeros(cmax, dtype=dtype)
-        M = pydbm_.book.SoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
+        M = pydbm.book.SoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
         
         #place to put model
         out = np.zeros(len(signal), dtype=float)
@@ -1311,7 +1310,7 @@ class SoundgrainDictionary(pydbm_.meta.Group, pydbm_.meta.IO, pydbm_.utils.Trans
         dtype.append(('mag', float))
 
         #M = np.zeros(cmax, dtype=dtype)
-        M = pydbm_.book.SoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
+        M = pydbm.book.SoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
         
         #place to put model
         out = np.zeros(len(signal), dtype=float)
@@ -1383,7 +1382,7 @@ class SoundgrainDictionary(pydbm_.meta.Group, pydbm_.meta.IO, pydbm_.utils.Trans
         dtype.append(('mag', '2float'))
 
         #M = np.zeros(cmax, dtype=dtype)
-        M = pydbm_.book.SoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
+        M = pydbm.book.SoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
         
         #place to put model
         out = np.zeros(len(signal), dtype=float)
