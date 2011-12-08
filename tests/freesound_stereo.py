@@ -1,7 +1,7 @@
 import audiolab
 
-import pydbm_.dictionary
-import pydbm_.data
+import pydbm.dictionary
+import pydbm.data
 import numpy as np
 
 target = '/Users/grahamboyes/Desktop/AMEN_stereo.wav'
@@ -11,13 +11,13 @@ db = ['/Users/grahamboyes/Desktop/taggedsounds/machine']
 xs, fs, p = audiolab.wavread(target)
 vecs = (xs[0:, 0], xs[0:, 1])
 
-S = pydbm_.data.SoundDatabase(db)
+S = pydbm.data.SoundDatabase(db)
 
 #if there is a transient model somewhere
 n = S.sdif2array('/Users/grahamboyes/Desktop/AMEN_stereo.mrk.sdif', ['XTRD'])['XTRD']
 n = (n['time'] * fs).astype(int)
 
-D = pydbm_.dictionary.SoundgrainDictionary(fs, S)
+D = pydbm.dictionary.SoundgrainDictionary(fs, S)
 
 for i in xrange(len(db)):
     D.addCorpus(n, i)

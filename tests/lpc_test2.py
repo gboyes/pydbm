@@ -1,10 +1,10 @@
 import os
 import numpy as np
-import pydbm_.dictionary
-import pydbm_.meta
-import pydbm_.data
-import pydbm_.atom
-import pydbm_.utils
+import pydbm.dictionary
+import pydbm.meta
+import pydbm.data
+import pydbm.atom
+import pydbm.utils
 
 import matplotlib.pyplot as plt
 import audiolab
@@ -15,8 +15,8 @@ import scipy.signal as sig
 
 x, fs, p = audiolab.wavread('/Users/grahamboyes/Documents/Work/sound_corpora/MUMS_converted/DVD 3/STRINGS/CELLOS/CELLO/CelA#2_4.08sec.wav')
 
-T = pydbm_.utils.MiscUtils()
-H = pydbm_.atom.HannGen()
+T = pydbm.utils.MiscUtils()
+H = pydbm.atom.HannGen()
 
 w = 2048
 k = 2048

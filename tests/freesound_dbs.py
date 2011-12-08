@@ -1,6 +1,6 @@
 import audiolab
-import pydbm_.dictionary
-import pydbm_.data
+import pydbm.dictionary
+import pydbm.data
 import numpy as np
 
 
@@ -11,13 +11,13 @@ outdir = '/Users/grahamboyes/Desktop'
 #a decomposition using the outdir                                                                                                                 
 x, fs, p = audiolab.wavread(target)
 
-S = pydbm_.data.SoundDatabase(db)
+S = pydbm.data.SoundDatabase(db)
 
 #if there is a transient model somewhere
 n = S.sdif2array('/Users/grahamboyes/Desktop/AMEN.mrk.sdif', ['XTRD'])['XTRD']
 n = (n['time'] * fs).astype(int)
 
-D = pydbm_.dictionary.SoundgrainDictionary(fs, S)
+D = pydbm.dictionary.SoundgrainDictionary(fs, S)
 
 for i in xrange(len(db)):
     D.addCorpus(n, i)

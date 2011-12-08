@@ -1,10 +1,10 @@
 import os
 import numpy as np
-import pydbm_.dictionary
-import pydbm_.meta
-import pydbm_.data
-import pydbm_.atom
-import pydbm_.utils
+import pydbm.dictionary
+import pydbm.meta
+import pydbm.data
+import pydbm.atom
+import pydbm.utils
 
 import matplotlib.pyplot as plt
 import audiolab
@@ -15,8 +15,8 @@ import scipy.signal as sig
 
 x, fs, p = audiolab.wavread('/Users/grahamboyes/Documents/Work/experiments_dup/experiments/test_samples/piano/MPdecomps/threePFNOF_4100_residual.wav')
 
-T = pydbm_.utils.MiscUtils()
-H = pydbm_.atom.HannGen()
+T = pydbm.utils.MiscUtils()
+H = pydbm.atom.HannGen()
 
 size = 16000
 coefs = T.lpc(x[16000:17024], 17)

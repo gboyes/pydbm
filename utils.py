@@ -165,13 +165,84 @@ class MiscUtils(object):
         else:
             return  np.r_[(1., np.zeros(order))]
 
-    def mfcc(self, x, Fs, CC, N):
+
+    def trfbank(self, fs, nfft, lowfreq, linsc, logsc, nlinfilt, nlogfilt):
+        """Compute triangular filterbank for MFCC computation."""
+        # Total number of filters
+        nfilt = nlinfilt + nlogfilt
+
+        #------------------------
+        # Compute the filter bank
+        #------------------------
+        # Compute start/middle/end points of the triangular filters in spectral
+        # domain
+        
+        freqs = np.zeros(nfilt+2)
+        freqs[:nlinfilt] = lowfreq + np.arange(nlinfilt) * linsc
+        freqs[nlinfilt:] = freqs[nlinfilt-1] * logsc ** np.arange(1, nlogfilt + 3)
+        heights = 2./(freqs[2:] - freqs[0:-2])
+
+        # Compute filterbank coeff (in fft domain, in bins)
+        fbank = np.zeros((nfilt, nfft))
+        # FFT bins (in Hz)
+        nfreqs = np.arange(nfft) / (1. * nfft) * fs
+
+        for i in range(nfilt):
+            low = freqs[i]
+            cen = freqs[i+1]
+            hi = freqs[i+2]
+
+            lid = np.arange(np.floor(low * nfft / fs) + 1,
+                        np.floor(cen * nfft / fs) + 1, dtype=np.int)
+            lslope = heights[i] / (cen - low)
+            rid = np.arange(np.floor(cen * nfft / fs) + 1,
+                        np.floor(hi * nfft / fs) + 1, dtype=np.int)
+            rslope = heights[i] / (hi - cen)
+            fbank[i][lid] = lslope * (nfreqs[lid] - low)
+            fbank[i][rid] = rslope * (hi - nfreqs[rid])
+
+        return fbank, freqs                                      
+
+    def mfcc(self, x, Fs, win, hop, nfft, CC):
         '''Mel-Frequency cepstral coefficients of signal x'''
 
         #filterbank parameters
         lowestFrequency = 133.3333
         linearFilters = 13
-        linearSpacing = 66.66666666
+        linearSpacing = 200./3
+        logFilters = 27
+        logSpacing = 1.0711703
+        totalFilters = linearFilters + logFilters
+
+        w = sig.hamming(win)
+
+        seg = np.zeros((np.ceil(len(x)/float(hop)), win))
+        i = 0
+        pin = 0
+        pend = len(x) - win
+        while pin < pend:
+            seg[i, 0:win] = x[pin:pin+win] * w
+            i += 1
+            pin += hop
+     
+        preEmp = sig.lfilter(np.array([1, -.97]), 1, seg)
+        fbank = self.trfbank(Fs, nfft, lowestFrequency, linearSpacing, logSpacing, linearFilters, logFilters)[0]
+     
+        #fftData = np.array(x) * w
+        fftMag = np.abs(fftpack.fft(preEmp, nfft, axis=-1))
+        earMag = np.log10(np.inner(fftMag, fbank) + 0.0000000001)
+        ceps = fftpack.realtransforms.dct(earMag, type=2, norm='ortho', axis=-1)[:, 0:CC]
+        
+        return ceps, earMag
+        
+
+    def mfcc_(self, x, Fs, CC, N):
+        '''Mel-Frequency cepstral coefficients of signal x'''
+
+        #filterbank parameters
+        lowestFrequency = 133.3333
+        linearFilters = 13
+        linearSpacing = 200./3
         logFilters = 27
         logSpacing = 1.0711703
         totalFilters = linearFilters + logFilters
@@ -186,20 +257,20 @@ class MiscUtils(object):
 
         mfccWeights = np.zeros((totalFilters, N))
         triangleHeight = 2./(upper-lower)
-        farray = np.arange(0., N)/N*Fs
-
+        farray = np.arange(N) / float(N) * Fs
+     
         for chan in range(0, totalFilters):
             a = ((farray > lower[chan])&(farray <= center[chan]))
             c = (farray-lower[chan])/(center[chan]-lower[chan])
             b = ((farray > center[chan]) &(farray <= upper[chan]))
             d = (upper[chan]-farray) / (upper[chan]-center[chan])
             mfccWeights[chan,:] = a * triangleHeight[chan] * c + b * triangleHeight[chan] * d
-
+            
         w = sig.hamming(len(x))
         coefDCT = 1/np.sqrt(totalFilters/2)*np.cos(((np.arange(0,CC))[:,np.newaxis]) * (2*np.arange(0 ,totalFilters)+1) * np.pi/2/totalFilters)
+        preEmp = sig.lfilter(np.array([1, -.97]), 1, x)
 
-        #preEmp = sig.lfilter(np.array([1, -.97]), 1, x)
-
+        
         fr = (np.arange(0, N/2.))[:, np.newaxis]/(N/2.)*Fs/2. 
         j = 0
         for i in range(0, N/2):
@@ -211,13 +282,14 @@ class MiscUtils(object):
             fr[i] = min(totalFilters-.0001, q)
         fri = np.fix(fr).astype(np.int16)
         frac = fr-fri
-    
-        #fftData = preEmp * w
-        fftData = np.array(x)
-        fftMag = abs(fftpack.fft(fftData, N))
-        earMag = np.log10(np.inner(mfccWeights, fftMag) + 0.0000000001)
-        ceps = np.inner(coefDCT, earMag)
         
+        fftData = preEmp * w
+        #fftData = np.array(x) * w
+        fftMag = np.abs(fftpack.fft(fftData, N))
+        earMag = np.log10(np.inner(mfccWeights, fftMag) + 0.0000000001)
+
+        ceps = np.inner(coefDCT, earMag)
+         
         return ceps
 
 

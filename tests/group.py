@@ -1,4 +1,4 @@
-import pydbm_.dictionary
+import pydbm.dictionary
 import numpy as np
 import numpy.lib.recfunctions as rfn
 import matplotlib.pyplot as plt
@@ -6,8 +6,8 @@ import audiolab
 
 x, fs, p = audiolab.wavread('/Users/grahamboyes/Desktop/VibesMedium_7100-80.wav')
 
-D = pydbm_.dictionary.Dictionary(fs)
-S = pydbm_.dictionary.SpecDictionary(fs)
+D = pydbm.dictionary.Dictionary(fs)
+S = pydbm.dictionary.SpecDictionary(fs)
 
 dtype = 'hann'
 dur = 4096

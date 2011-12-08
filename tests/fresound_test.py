@@ -4,8 +4,8 @@ import json
 import xml.etree.ElementTree as etree
 
 import audiolab
-import pydbm_.dictionary
-import pydbm_.data
+import pydbm.dictionary
+import pydbm.data
 
 
 #freesound stuff
@@ -31,12 +31,12 @@ for page in range(low, high):
 #a decomposition using the outdir
 x, fs, p = audiolab.wavread('/Users/grahamboyes/Documents/python/pythonDafx/SOUNDS/AMEN.wav')
 
-S = pydbm_.data.SoundDatabase([outdir])
+S = pydbm.data.SoundDatabase([outdir])
 
 n = S.sdif2array('/Users/grahamboyes/Desktop/AMEN.mrk.sdif', ['XTRD'])['XTRD'] 
 n = (n['time'] * fs).astype(int)
 
-D = pydbm_.dictionary.SoundgrainDictionary(fs, S)
+D = pydbm.dictionary.SoundgrainDictionary(fs, S)
 D.addCorpus(n, 0)
 
 x_ = np.zeros(len(x) + max(D.atoms['duration']))

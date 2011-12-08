@@ -1,6 +1,6 @@
-import pydbm_.data 
-import pydbm_.dictionary
-import pydbm_.book
+import pydbm.data 
+import pydbm.dictionary
+import pydbm.book
 
 import audiolab
 import numpy as np
@@ -8,9 +8,9 @@ import numpy as np
 x, fs, p = audiolab.wavread('/Users/grahamboyes/Documents/Work/project_m/harm_fof.wav')
 
 list_of_corpora = ['/Users/grahamboyes/Documents/Work/project_m/16khz/ordinario/SoftMallet/forte', '/Users/grahamboyes/Documents/Work/project_m/16khz/ordinario/SoftMallet/piano']
-S = pydbm_.data.SoundDatabase(list_of_corpora)
+S = pydbm.data.SoundDatabase(list_of_corpora)
 
-D = pydbm_.dictionary.SoundgrainDictionary(16000, S)
+D = pydbm.dictionary.SoundgrainDictionary(16000, S)
 D.addCorpus(np.array([512, 1024, 2048, 4096]), 0)
 D.addCorpus(np.array([512, 1024, 2048, 4096]), 1)
 

@@ -34,5 +34,5 @@ plt.figure(1)
 plt.imshow(abs(CC), vmax=1., aspect='auto', origin='lower', cmap='Greys')
 plt.colorbar()
 
-#plt.xlabel('time (s)')
-#plt.ylabel('frequency (Hz)')
+plt.xlabel('time (s)')
+plt.ylabel('frequency (Hz)')

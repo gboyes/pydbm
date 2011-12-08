@@ -1,5 +1,5 @@
-import pydbm_.data 
-import pydbm_.dictionary
+import pydbm.data 
+import pydbm.dictionary
 
 import numpy as np
 import audiolab
@@ -9,10 +9,10 @@ sdif = '/Users/grahamboyes/Documents/Work/project_m/harm_fof_shape.sdif'
 
 list_of_corpora = ['/Users/grahamboyes/Documents/Work/project_m/16khz/ordinario/Muted/forte', '/Users/grahamboyes/Documents/Work/project_m/16khz/ordinario/Muted/piano']
 
-Y = pydbm_.data.PolygonGroup(sdif)
-S = pydbm_.data.SoundDatabase(list_of_corpora)
+Y = pydbm.data.PolygonGroup(sdif)
+S = pydbm.data.SoundDatabase(list_of_corpora)
 
-D = pydbm_.dictionary.SoundgrainDictionary(fs, S)
+D = pydbm.dictionary.SoundgrainDictionary(fs, S)
 
 for y in Y.polygons:
     D.addPolygon(x.copy(), 1024, y, 2048, 256, 6)

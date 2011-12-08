@@ -1,3 +1,20 @@
+'''pydbm : a python library for dictionary-based methods 
+    Copyright (C) 2011 Graham Boyes
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+'''
+
 import numpy as np
 import scipy.linalg as linalg
 import scipy.signal as sig
@@ -126,6 +143,15 @@ class MiscUtils(object):
 
         return (1./len(X)) * sum( ( X / Y) - np.log( X / Y ) - 1)
 
+    def levinson(self, acf, order):
+        '''Levinson recursion for a given autocorrelation function and order'''
+        
+        R = linalg.toeplitz([acf[0:order]], [(acf[0:order]).conjugate()])
+        b = -acf[1:order+1]
+        a = linalg.lstsq(R, b.T)[0].T
+        
+        return np.real(np.r_[(1., a)])
+
     def lpc(self, x, order):
         '''Generate a given number of linear prediction coefficients for a given signal'''
         
@@ -135,9 +161,47 @@ class MiscUtils(object):
         acf = acf/len(x)
 
         if linalg.norm(acf) != 0:
-            return  levinson(acf, order)
+            return  self.levinson(acf, order)
         else:
             return  np.r_[(1., np.zeros(order))]
+
+
+    def trfbank(self, fs, nfft, lowfreq, linsc, logsc, nlinfilt, nlogfilt):
+        """Compute triangular filterbank for MFCC computation."""
+        # Total number of filters
+        nfilt = nlinfilt + nlogfilt
+
+        #------------------------
+        # Compute the filter bank
+        #------------------------
+        # Compute start/middle/end points of the triangular filters in spectral
+        # domain
+        
+        freqs = np.zeros(nfilt+2)
+        freqs[:nlinfilt] = lowfreq + np.arange(nlinfilt) * linsc
+        freqs[nlinfilt:] = freqs[nlinfilt-1] * logsc ** np.arange(1, nlogfilt + 3)
+        heights = 2./(freqs[2:] - freqs[0:-2])
+
+        # Compute filterbank coeff (in fft domain, in bins)
+        fbank = np.zeros((nfilt, nfft))
+        # FFT bins (in Hz)
+        nfreqs = np.arange(nfft) / (1. * nfft) * fs
+
+        for i in range(nfilt):
+            low = freqs[i]
+            cen = freqs[i+1]
+            hi = freqs[i+2]
+
+            lid = np.arange(np.floor(low * nfft / fs) + 1,
+                        np.floor(cen * nfft / fs) + 1, dtype=np.int)
+            lslope = heights[i] / (cen - low)
+            rid = np.arange(np.floor(cen * nfft / fs) + 1,
+                        np.floor(hi * nfft / fs) + 1, dtype=np.int)
+            rslope = heights[i] / (hi - cen)
+            fbank[i][lid] = lslope * (nfreqs[lid] - low)
+            fbank[i][rid] = rslope * (hi - nfreqs[rid])
+
+        return fbank, freqs                                      
 
     def mfcc(self, x, Fs, CC, N):
         '''Mel-Frequency cepstral coefficients of signal x'''
@@ -145,11 +209,12 @@ class MiscUtils(object):
         #filterbank parameters
         lowestFrequency = 133.3333
         linearFilters = 13
-        linearSpacing = 66.66666666
+        linearSpacing = 200./3
         logFilters = 27
         logSpacing = 1.0711703
         totalFilters = linearFilters + logFilters
 
+        '''
         #frequency band edges
         freqs = lowestFrequency + np.arange(0, linearFilters)*linearSpacing
         freqs = np.r_[(freqs, freqs[linearFilters-1] * logSpacing ** np.arange(1, logFilters+3))]
@@ -160,8 +225,8 @@ class MiscUtils(object):
 
         mfccWeights = np.zeros((totalFilters, N))
         triangleHeight = 2./(upper-lower)
-        farray = np.arange(0., N)/N*Fs
-
+        farray = np.arange(N) / float(N) * Fs
+     
         for chan in range(0, totalFilters):
             a = ((farray > lower[chan])&(farray <= center[chan]))
             c = (farray-lower[chan])/(center[chan]-lower[chan])
@@ -169,11 +234,13 @@ class MiscUtils(object):
             d = (upper[chan]-farray) / (upper[chan]-center[chan])
             mfccWeights[chan,:] = a * triangleHeight[chan] * c + b * triangleHeight[chan] * d
 
+        '''
         w = sig.hamming(len(x))
-        coefDCT = 1/np.sqrt(totalFilters/2)*np.cos(((np.arange(0,CC))[:,np.newaxis]) * (2*np.arange(0 ,totalFilters)+1) * np.pi/2/totalFilters)
+        #coefDCT = 1/np.sqrt(totalFilters/2)*np.cos(((np.arange(0,CC))[:,np.newaxis]) * (2*np.arange(0 ,totalFilters)+1) * np.pi/2/totalFilters)
 
-        #preEmp = sig.lfilter(np.array([1, -.97]), 1, x)
+        preEmp = sig.lfilter(np.array([1, -.97]), 1, x)
 
+        '''
         fr = (np.arange(0, N/2.))[:, np.newaxis]/(N/2.)*Fs/2. 
         j = 0
         for i in range(0, N/2):
@@ -185,12 +252,16 @@ class MiscUtils(object):
             fr[i] = min(totalFilters-.0001, q)
         fri = np.fix(fr).astype(np.int16)
         frac = fr-fri
+        '''
+        fbank = self.trfbank(Fs, N, lowestFrequency, linearSpacing, logSpacing, linearFilters, logFilters)[0]
+        print(fbank)
     
-        #fftData = preEmp * w
-        fftData = np.array(x)
-        fftMag = abs(fftpack.fft(fftData, N))
-        earMag = np.log10(np.inner(mfccWeights, fftMag)+0.0000000001)
-        ceps = np.inner(coefDCT, earMag)
+        fftData = preEmp * w
+        #fftData = np.array(x) * w
+        fftMag = np.abs(fftpack.fft(fftData, N))
+        earMag = np.log10(np.inner(fbank, fftMag) + 0.0000000001)
+        #ceps = np.inner(coefDCT, earMag)
+        ceps = TransUtils().dct(earMag)[0:CC]
         
         return ceps
 
@@ -199,7 +270,7 @@ class TransUtils(object):
 
     '''Some useful transforms'''
 
-    def stft(self, x, W, NFFT, hop, w='hann', trim=True):
+    def stft(self, x, W, NFFT, hop, w='hann'):
 
         '''Short-Time Fourier Transform                                                                                               
         x -- input signal                                                                                       
@@ -228,12 +299,9 @@ class TransUtils(object):
             cnt += 1
             pin += hop
 
-        if trim == True:
-            X = X[0:NFFT, np.floor(W/float(hop))/2 : np.floor(L/float(hop))]
-            return X
-        else:
-            return X
-
+        X = X[0:NFFT, np.floor(W/float(hop))/2 : np.floor(L/float(hop))]
+        return X
+        
     def dftMatrix(self, N):
         '''N point Discrete Fourier Transform Matrix'''
         f = np.arange(N)
