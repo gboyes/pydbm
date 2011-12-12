@@ -17,7 +17,6 @@
 
 import numpy as np
 import scipy.fftpack as fftpack
-
 import atom_
 
 #Atom generators#
