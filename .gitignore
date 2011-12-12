@@ -1,10 +1,2 @@
-<<<<<<< .merge_file_yoMPoi
 .DS_Store
-extensions/**/*
-=======
-#ignore this guy
-.DS_Store
-
-#ignore the extensions folder because it contains binaries that will screw up the thing on mac/linux
-extensions/**/*
->>>>>>> .merge_file_gtsCmV
+extensions
