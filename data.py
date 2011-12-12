@@ -30,7 +30,7 @@ import pydbm.utils
 #Class for to obtain and store information related to a particular instrument subspace#
 #######################################################################################
 
-class InstrumentSubspace(pydbm.meta.IO, pydbm.meta.Spectral, pydbm.utils.MiscUtils):
+class InstrumentSubspace(pydbm.meta.IO, pydbm.meta.Spectral, pydbm.utils.Utils):
     '''Class for data related a particular instrument subspace'''
 
     def __init__(self, fs, instrument):

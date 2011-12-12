@@ -25,16 +25,16 @@ import scipy.signal as sig
 import scipy.fftpack as fftpack
 
 import pysdif
-import audiolab
+import scikits.audiolab
 import numpy.lib.recfunctions as rfn
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 import pydbm.meta
 import pydbm.utils
 
 #idea: deal with statistics of atoms?  Assume a model is a distribution of elements with mean std etc.
 
-class Book(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.TransUtils):
+class Book(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
 
     '''Time-Frequency synthesis Book'''
 
@@ -234,7 +234,7 @@ class Book(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.TransUtils):
 
 #a book of quasi-harmonically related atoms (components of structures)
 
-class SpectralBook(pydbm.utils.MiscUtils, Book):
+class SpectralBook(Book):
     '''A synthesis book with a description of spectral structures'''
 
     def __init__(self, maxnum, dtype, fs):

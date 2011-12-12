@@ -35,11 +35,10 @@ import pydbm.data
 import pydbm.book
 import pydbm.utils
 
-
 #most basic dictionary#
 #######################
 
-class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.MiscUtils):
+class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
     '''Time-frequency analysis dictionary'''
 
     def __init__(self, fs):
@@ -327,8 +326,7 @@ class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.MiscUtils):
         #initialize
         dtype = self.atoms.dtype.descr
         dtype.append(('mag', float))
-        dtype.append(('phase', float))
-        
+        dtype.append(('phase', float))        
         B = pydbm.book.Book(cmax, dtype, self.sampleRate)
 
         #place to put model
@@ -510,7 +508,7 @@ class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.MiscUtils):
 #Spectral Dictionary#
 #####################
 
-class SpecDictionary(Dictionary, pydbm.meta.Spectral, pydbm.utils.MiscUtils):
+class SpecDictionary(Dictionary, pydbm.meta.Spectral, pydbm.utils.Utils):
 
     def __init__(self, fs):
         pydbm.meta.Spectral.__init__(self)
@@ -748,10 +746,197 @@ class SpecDictionary(Dictionary, pydbm.meta.Spectral, pydbm.utils.MiscUtils):
 
         return out, signal, book
 
+    def mp2(self, signal, cmax, srr_thresh, tolmidicents, maxPeaks, dBthresh, overspec):
+
+        #initialize
+        dtype = self.atoms.dtype.descr
+        dtype.append(('mag', float))
+        dtype.append(('phase', float))
+
+        book = pydbm.book.SpectralBook(cmax * maxPeaks, dtype, self.sampleRate)
+        out = np.zeros(len(signal))
+
+        #place to hold analysis values
+        max_mag = np.zeros(self.num())
+        up_ind = np.arange(self.num())
+
+        #initialize breaking condition
+        start_norm = linalg.norm(signal)
+        last_srr = 1.
+        srr = 0.
+        c_cnt = 0
+        t_cnt = 0
+
+        tol = tolmidicents / float(100)
+
+        while (c_cnt < cmax) and (srr <= srr_thresh) and (abs(last_srr - srr) > 0):
+            print(c_cnt)
+            for cnt in up_ind:
+                w = self.atomGenTable[self.atoms['type'][cnt]].winargs
+                if w:
+                    winargs = dict(zip(w, self.atoms[w][cnt]))
+                else:
+                    winargs = {}
+                win = self.atomGenTable[self.atoms['type'][cnt]].window(self.atoms['duration'][cnt], **winargs)
+                X = fftpack.fft(signal[self.atoms['onset'][cnt] : self.atoms['onset'][cnt] + self.atoms['duration'][cnt]] * win)
+                L, V = self.pickPeaks(abs(X), maxPeaks, dBthresh, self.atomGenTable[self.atoms['type'][cnt]].enbw(self.atoms['duration'][cnt], **winargs), self.atoms['duration'][cnt]*overspec, self.atoms['type'][cnt], **winargs)
+
+                if len(L) == 0:
+                   max_mag[cnt] = -np.inf
+                   continue
+
+                L, V, P = self.interpolateValues(abs(X), np.angle(X), self.atoms['duration'][cnt]*overspec, L, V, self.atoms['duration'][cnt], self.atoms['type'][cnt], **winargs)
+
+                #sort according to ascending frequency
+                sind = np.argsort(L)
+                L = L[sind]
+                #remove anything below the 'fundamental', make this logarithmic...
+                L = L[(L != 0.) & (self.hz2midi(L / self.atoms['duration'][cnt] * self.sampleRate) > self.hz2midi(self.atoms['omega'][cnt] * self.sampleRate) - tol)]
+                if (len(L) == 0):
+                    max_mag[cnt] = -np.inf
+                    continue
+
+                #fundamental
+                f0 = L[np.argmin(abs(L / self.atoms['duration'][cnt] - self.atoms['omega'][cnt]))] / self.atoms['duration'][cnt]
+                dist = abs(self.hz2midi(f0 * self.sampleRate) - self.hz2midi(self.atoms['omega'][cnt] * self.sampleRate))
+
+                if dist >= tol:
+                    max_mag[cnt] = -np.inf
+                    continue
+
+                L = L[np.where(L / self.atoms['duration'][cnt] >= f0)[0]]
+                fnote = self.hz2midi(L/self.atoms['duration'][cnt] * self.sampleRate)
+            
+                #theoretical note locations
+                tnote = self.hz2midi(f0 * np.arange(1, maxPeaks) * self.sampleRate)
+                inds = [i for (i, val) in enumerate(fnote) if np.min(abs(tnote - val)) <= tol] 
+
+                if len(inds) > 0:
+                    dnow = self.atoms[cnt].copy()
+                    pmag = np.zeros((dnow['duration'], len(inds)))
+                    pphase = pmag.copy()
+                    xnow = signal[dnow['onset'] : dnow['onset'] + dnow['duration']]
+                    
+                    for ii, i in enumerate(inds):
+                        dnow['omega'] = L[i] / dnow['duration']
+                        a1 = self.atomGenTable[dnow['type']].gen(0., *[dnow[arg] for arg in self.atomGenTable[dnow['type']].genargs])
+                        a1 *= (1./linalg.norm(a1))
+                        a2 = self.atomGenTable[dnow['type']].gen(np.pi/2, *[dnow[arg] for arg in self.atomGenTable[dnow['type']].genargs])
+                        a2 *= (1./linalg.norm(a2))
+                        pmag[:, ii] = a1 
+                        pphase[:, ii] = a2
+
+                    lsq_m = linalg.lstsq(pmag, xnow)[0] 
+                    lsq_p = linalg.lstsq(pphase, xnow)[0]
+                    phi = np.arctan2(lsq_p, lsq_m)
+                    mags = np.sqrt(lsq_m**2 + lsq_p**2)
+                    max_mag[cnt] = np.sum(mags)
+                
+            ind = np.argmax(max_mag) 
+            dnow = self.atoms[ind].copy()
+
+            w = self.atomGenTable[self.atoms['type'][ind]].winargs
+            if w : 
+                winargs = dict(zip(w, self.atoms[w][ind]))
+            else:
+                winargs = {}
+
+            win = self.atomGenTable[dnow['type'] ].window(dnow['duration'], **winargs)
+            X = fftpack.fft(signal[dnow['onset'] : dnow['onset']  + dnow['duration']] * win) 
+
+            L, V = self.pickPeaks(abs(X), maxPeaks, dBthresh, self.atomGenTable[dnow['type']].enbw(dnow['duration'], **winargs), dnow['duration']*overspec, dnow['type'], **winargs)    
+            L, V, P = self.interpolateValues(abs(X), np.angle(X), dnow['duration']*overspec, L, V, dnow['duration'] , dnow['type'] , **winargs)
+
+            #sort according to ascending frequency
+            sind = np.argsort(L)
+            L = L[sind]
+
+            #remove anything below the 'fundamental', make this logarithmic...
+            L = L[(L != 0.) & (self.hz2midi(L / dnow['duration'] * self.sampleRate) > self.hz2midi(dnow['omega'] * self.sampleRate) - tol)] 
+            if len(L) == 0:
+                last_srr = srr
+                continue
+            
+            #fundamental
+            f0 = L[np.argmin(abs(L / dnow['duration'] - dnow['omega']))] / dnow['duration']
+            dist = abs(self.hz2midi(f0 * self.sampleRate) - self.hz2midi(dnow['omega'] * self.sampleRate))
+            if dist >= tol:
+                last_srr = srr
+                continue
+
+            L = L[np.where(L / dnow['duration'] >= f0)[0]]
+            fnote = self.hz2midi(L/dnow['duration'] * self.sampleRate)
+            
+            #theoretical note locations
+            tnote = self.hz2midi(f0 * np.arange(1, maxPeaks) * self.sampleRate)
+            inds = [i for (i, val) in enumerate(fnote) if np.min(abs(tnote - val)) <= tol] 
+            if len(inds) == 0:
+                last_srr = srr
+                continue
+
+            xnow = signal[dnow['onset'] : dnow['onset'] + dnow['duration']]
+            pmag = np.zeros((dnow['duration'], len(inds)))
+            pphase = pmag.copy()
+
+            for ii, i in enumerate(inds):
+                dnow['omega'] = L[i] / dnow['duration']
+                a1 = self.atomGenTable[dnow['type']].gen(0., *[dnow[arg] for arg in self.atomGenTable[dnow['type']].genargs])
+                a1 *= (1./linalg.norm(a1))
+                a2 = self.atomGenTable[dnow['type']].gen(np.pi/2, *[dnow[arg] for arg in self.atomGenTable[dnow['type']].genargs])
+                a2 *= (1./linalg.norm(a2))
+                pmag[:, ii] = a1 
+                pphase[:, ii] = a2 
+                book.atoms[t_cnt]['omega'] = dnow['omega']
+                book.atoms[t_cnt]['type'] = dnow['type']
+                book.atoms[t_cnt]['onset'] = dnow['onset']
+                book.atoms[t_cnt]['duration'] = dnow['duration']
+                book.atoms[t_cnt]['index'][1] = ii #component
+                book.atoms[t_cnt]['index'][0] = c_cnt
+                t_cnt += 1
+                
+            lsq_m = linalg.lstsq(pmag, xnow)[0] 
+            lsq_p = linalg.lstsq(pphase, xnow)[0]
+            phi = np.arctan2(lsq_p, lsq_m)
+            mags = np.sqrt(lsq_m**2 + lsq_p**2)
+
+            atom = np.hstack(np.array((np.matrix(pmag) * np.vstack(lsq_m)))) + np.hstack(np.array((np.matrix(pphase) * np.vstack(lsq_p))))
+
+            signal[dnow['onset'] : dnow['onset'] + dnow['duration']] -= atom
+            out[dnow['onset'] : dnow['onset'] + dnow['duration']] += atom
+
+            book.atoms[t_cnt-len(inds):t_cnt]['mag'] = mags
+            book.atoms[t_cnt-len(inds):t_cnt]['phase'] = phi
+            
+            for key in winargs.keys():
+                book.atoms[t_cnt-len(inds):t_cnt][key] = dnow[key]
+            
+            last_srr = srr
+            srr = 10 * np.log10( linalg.norm(out)**2 / linalg.norm(signal)**2 ) 
+            print(linalg.norm(signal)**2 / start_norm**2)
+            print(srr)
+ 
+            #indices to update
+            up_ind = np.union1d(np.intersect1d(np.where(self.atoms['onset'] + self.atoms['duration'] < dnow['onset'] + dnow['duration'])[0], 
+                                    np.where(self.atoms['onset'] + self.atoms['duration'] >= dnow['onset'])[0]),
+                                np.intersect1d(np.where(self.atoms['onset'] < dnow['onset'] + dnow['duration'])[0], 
+                                    np.where(self.atoms['onset']  >= dnow['onset'])[0]))
+            max_mag[up_ind] = 0.
+            
+
+            c_cnt += 1
+
+        book.atoms = book.atoms[0:t_cnt]
+        book.model = np.array(out)
+        book.residual = np.array(signal)
+        book.resPercent =  (linalg.norm(book.residual)**2 / start_norm**2) * 100
+        book.srr = srr
+
+        return out, signal, book
+
     
 #Instrument-Specific Dictionaries#
 ##################################
-
+#FIX or scrap
 class InstrumentDictionary(pydbm.data.InstrumentSubspace, Dictionary):
 
     '''Class to build a dictionary of instrument-specific atoms with pursuits that consider these structures'''
@@ -968,7 +1153,7 @@ class Block(pydbm.meta.Types):
         self.genargs = [winargs[key] for key in [k for k in self.AtomGen.genargs if k not in ['duration', 'omega', 'chirp']]]
         self.gen = lambda phi, omega : self.AtomGen.gen(phi, self.scale, omega, chirp, *self.genargs)
 
-class BlockDictionary(pydbm.meta.Types, pydbm.utils.MiscUtils):
+class BlockDictionary(pydbm.meta.Types, pydbm.utils.Utils):
 
     '''a 'higher-level' setting of a dictionary ''' 
 
@@ -1138,7 +1323,7 @@ class BlockDictionary(pydbm.meta.Types, pydbm.utils.MiscUtils):
 
         return out, signal, book
         
-class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.TransUtils):
+class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
 
     '''Dictionary for corpus-based synthesis'''
 
@@ -1301,7 +1486,7 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.TransUti
 
         return out, signal, M
 
-    def mp2(self, signal, cmax, srr_thresh, globscalar):
+    def tvmp(self, signal, cmax, srr_thresh, globscalar):
 
         '''Experimental variant of MP that does not re-scale the samples'''
 
@@ -1374,6 +1559,7 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.TransUti
 
         return out, signal, M
 
+    #FIX
     def mp_stereo(self, signal, cmax, srr_thresh):
         '''Matching Pursuit for stereo sound grains'''
 

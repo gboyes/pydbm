@@ -20,7 +20,7 @@ import scipy.linalg as linalg
 import scipy.signal as sig
 import scipy.fftpack as fftpack
 
-class MiscUtils(object):
+class Utils(object):
     '''Class for related utilities'''
     
     def zeroNorm(self, x):
@@ -170,13 +170,6 @@ class MiscUtils(object):
         """Compute triangular filterbank for MFCC computation."""
         # Total number of filters
         nfilt = nlinfilt + nlogfilt
-
-        #------------------------
-        # Compute the filter bank
-        #------------------------
-        # Compute start/middle/end points of the triangular filters in spectral
-        # domain
-        
         freqs = np.zeros(nfilt+2)
         freqs[:nlinfilt] = lowfreq + np.arange(nlinfilt) * linsc
         freqs[nlinfilt:] = freqs[nlinfilt-1] * logsc ** np.arange(1, nlogfilt + 3)
@@ -234,71 +227,31 @@ class MiscUtils(object):
         ceps = fftpack.realtransforms.dct(earMag, type=2, norm='ortho', axis=-1)[:, 0:CC]
         
         return ceps, earMag
+
+    def segmat(self, x, nwin, hop):
+        '''Make a segment matrix out of vector x'''
+
+        X = np.zeros((nwin, np.ceil(len(x)/float(hop))))
+        pin = 0
+        pend = len(x) - nwin
+        while pin < pend:
+            X[:, pin/hop] = x[pin:pin+nwin]
+            pin += hop    
         
-
-    def mfcc_(self, x, Fs, CC, N):
-        '''Mel-Frequency cepstral coefficients of signal x'''
-
-        #filterbank parameters
-        lowestFrequency = 133.3333
-        linearFilters = 13
-        linearSpacing = 200./3
-        logFilters = 27
-        logSpacing = 1.0711703
-        totalFilters = linearFilters + logFilters
-
-        #frequency band edges
-        freqs = lowestFrequency + np.arange(0, linearFilters)*linearSpacing
-        freqs = np.r_[(freqs, freqs[linearFilters-1] * logSpacing ** np.arange(1, logFilters+3))]
-
-        lower = freqs[0:totalFilters]
-        center = freqs[1:totalFilters+1]
-        upper = freqs[2:totalFilters+2]
-
-        mfccWeights = np.zeros((totalFilters, N))
-        triangleHeight = 2./(upper-lower)
-        farray = np.arange(N) / float(N) * Fs
-     
-        for chan in range(0, totalFilters):
-            a = ((farray > lower[chan])&(farray <= center[chan]))
-            c = (farray-lower[chan])/(center[chan]-lower[chan])
-            b = ((farray > center[chan]) &(farray <= upper[chan]))
-            d = (upper[chan]-farray) / (upper[chan]-center[chan])
-            mfccWeights[chan,:] = a * triangleHeight[chan] * c + b * triangleHeight[chan] * d
-            
-        w = sig.hamming(len(x))
-        coefDCT = 1/np.sqrt(totalFilters/2)*np.cos(((np.arange(0,CC))[:,np.newaxis]) * (2*np.arange(0 ,totalFilters)+1) * np.pi/2/totalFilters)
-        preEmp = sig.lfilter(np.array([1, -.97]), 1, x)
-
-        
-        fr = (np.arange(0, N/2.))[:, np.newaxis]/(N/2.)*Fs/2. 
-        j = 0
-        for i in range(0, N/2):
-            if fr[i] > center[j+1]:
-                j += 1
-            if j > totalFilters-2:
-                j = totalFilters-2
-            q = max(1, j + (fr[i] - center[j])/(center[j+1]-center[j]))
-            fr[i] = min(totalFilters-.0001, q)
-        fri = np.fix(fr).astype(np.int16)
-        frac = fr-fri
-        
-        fftData = preEmp * w
-        #fftData = np.array(x) * w
-        fftMag = np.abs(fftpack.fft(fftData, N))
-        earMag = np.log10(np.inner(mfccWeights, fftMag) + 0.0000000001)
-
-        ceps = np.inner(coefDCT, earMag)
-         
-        return ceps
-
-
-class TransUtils(object):
+        return X
 
     '''Some useful transforms'''
 
-    def stft(self, x, W, NFFT, hop, w='hann'):
+    def stft(self, x, nwin, nfft, hop, w='hann'):
 
+        windows = {'hann' :sig.hanning, 'blackman' : sig.blackman, 'hamming' : sig.hamming}
+        win = windows[w](nwin)
+        xs = self.segmat(x, nwin, hop) * np.vstack(win)  
+        X = fftpack.fft(xs, nfft, axis=0)
+        return X
+
+    def stft_(self, x, W, NFFT, hop, w='hann'):
+        #this one is actually faster
         '''Short-Time Fourier Transform                                                                                               
         x -- input signal                                                                                       
         W -- analysis window size                                                                                                 
@@ -325,7 +278,6 @@ class TransUtils(object):
             X[0:NFFT, cnt] += G
             cnt += 1
             pin += hop
-
         X = X[0:NFFT, np.floor(W/float(hop))/2 : np.floor(L/float(hop))]
         return X
         
@@ -333,10 +285,10 @@ class TransUtils(object):
         '''N point Discrete Fourier Transform Matrix'''
         f = np.arange(N)
 
-        #Vandermonde matrix (N, N)                                                                                                                                                
+        #Vandermonde matrix (N, N)                                                                                                                          
         F = np.outer(f, f)
 
-        #basis                                                                                                                                                                    
+        #basis                                                                                                                                               
         omega = np.exp(-2*np.pi*1j/N)
         W = np.asmatrix(1./np.sqrt(N)*np.power(omega, F))
 
@@ -344,7 +296,9 @@ class TransUtils(object):
 
     def dct(self, x):
         '''Compute discrete cosine transform of 1-d array x'''
-    
+
+        #probably don't need this here anymore since it is in fftpack now    
+
         N = len(x)
         #calculate DCT weights
         w = (np.exp(-1j*np.arange(N)*np.pi/(2*N))/np.sqrt(2*N))
