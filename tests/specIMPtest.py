@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import scikits.audiolab
 import time
 
-x, fs, p = scikits.audiolab.wavread('/home/frobenius/Documents/Sounds/harm_fof.wav')
+x, fs, p = scikits.audiolab.wavread('../sounds/harm_fof.wav')
 
 D = pydbm.dictionary.SpecDictionary(fs)
 D.addNote('hann', 6000, [512], [np.arange(0, len(x)-512, 256)])
@@ -14,4 +14,4 @@ mod, res, book = D.mp2(x, 1000, 35, 10000, 10, -80, 2)
 print(time.clock()-a)
 print(book.num())
 
-scikits.audiolab.wavwrite(mod, '/home/frobenius/Desktop/mod.wav', fs)
+scikits.audiolab.wavwrite(mod, '../sounds/mod.wav', fs)
