@@ -1,0 +1,5 @@
+import numpy as np
+import pydbm.dictionary
+import scikits.audiolab as audiolab
+
+x, fs, p = audiolab.wavread('/home/frobenius/Documents/Sounds/harm_fof.wav')
