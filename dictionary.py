@@ -1580,21 +1580,29 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
                 a = np.inner(atom, signal[self.atoms['onset'][cnt]:self.atoms['onset'][cnt]+self.atoms['duration'][cnt]]) / self.atoms['norm'][cnt]
                 max_mag[cnt] = a    
 
+            #Application of constraints
             if c_cnt == 0:
                 indx = np.argmax(max_mag)
                 a = max_mag[indx]
+                up_ind = np.intersect1d(np.where(self.atoms['onset'] >= self.atoms['onset'][indx] - max_scale)[0],
+                                            np.where(self.atoms['onset'] < self.atoms['onset'][indx] + max_scale)[0])
+                max_mag[up_ind] = 0.
+                
             else:
                 mag_sort = np.argsort(max_mag)[::-1]    
                 indx = None
                 for magi in mag_sort:
                     constraint1 = sum(np.where(M.atoms['onset'][0:c_cnt] == self.atoms['onset'][magi])[0]) <= maxsimul
-                    constraint2 = all(abs(M.atoms['onset'][0:c_cnt] - self.atoms['onset'][magi]) >= mindistance) or self.atoms['onset'][magi] in M.atoms['onset'][0:c_cnt] 
+                    constraint2 = all(abs(M.atoms['onset'][0:c_cnt] - self.atoms['onset'][magi]) >= mindistance) or self.atoms['onset'][magi] in M.atoms['onset'][0:c_cnt]
+                    
                     if constraint1 and constraint2:
                         indx = magi
                         a = max_mag[indx]
                         up_ind = np.intersect1d(np.where(self.atoms['onset'] >= self.atoms['onset'][indx] - max_scale)[0],
                                             np.where(self.atoms['onset'] < self.atoms['onset'][indx] + max_scale)[0])
                         max_mag[up_ind] = 0.
+                        up_ind = up_ind[np.union1d(np.where(abs(self.atoms['onset'] - self.atoms['onset'][magi]) >= mindistance)[0],
+                                                   np.where(self.atoms['onset'] in M.atoms['onset'][0:c_cnt])[0])]
                         break
 
             if not indx:
