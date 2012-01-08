@@ -25,7 +25,6 @@ import numpy as np
 import scipy.fftpack as fftpack
 import scipy.linalg as linalg
 import scipy.interpolate as interpolate
-import scipy.cluster.vq as vq
 import pysdif
 import numpy.lib.recfunctions as rfn
 
@@ -35,9 +34,10 @@ import pydbm.data
 import pydbm.book
 import pydbm.utils
 
+#FIX: module needs some cleanup and refactoring
+
 #most basic dictionary#
 #######################
-
 class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
     '''Time-frequency analysis dictionary'''
 
@@ -156,7 +156,8 @@ class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
 
         self.atoms = rfn.stack_arrays((self.atoms, d)).data
 
-    def addPolygon(self, Poly, dtype, scale, nbins, hop, **kwargs):
+    def addPolygon(self, Poly, dtype, scale, nbins, hop, **kwargs)
+        '''Add a set of atoms for a give Polygon instance''':
 
         Poly.getPolyHull(self.sampleRate, hop, nbins)
 
@@ -1324,7 +1325,7 @@ class BlockDictionary(pydbm.meta.Types, pydbm.utils.Utils):
         
 class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
 
-    '''Dictionary for corpus-based synthesis'''
+    '''Dictionary class for corpus-based synthesis'''
 
     def __init__(self, fs, SoundDatabase):
         pydbm.meta.IO.__init__(self)
@@ -1635,7 +1636,7 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
 
         return out, signal, M
 
-    #FIX THIS
+    #FIX 
     def mp_stereo(self, signal, cmax, srr_thresh):
         '''Matching Pursuit for stereo sound grains'''
 

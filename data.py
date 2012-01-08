@@ -147,7 +147,7 @@ class InstrumentSubspace(pydbm.meta.IO, pydbm.meta.Spectral, pydbm.utils.Utils):
 
                 a['amplitude'] *= 1./np.sqrt(np.sum(a['amplitude']**2))
 
-    #fix this
+    #FIX
     '''
     def cluster(self, total):
         
@@ -242,7 +242,7 @@ class Corpus(pydbm.meta.IO):
 
     
     def getSignalDescriptors(self):
-        #'''Fill a database with signal descriptors for a sound corpus'''
+        '''Fill a database with signal descriptors for a sound corpus'''
         #idea: user should be able to give a list of built-in descriptor types
 
         self.signalDescriptors = {'norm' : np.zeros(sum(self.cardinality), dtype=float)}
@@ -284,7 +284,7 @@ class Corpus(pydbm.meta.IO):
 ########################
 
 class PartialModel(pydbm.meta.IO):
-    '''A class which contains a set of partials and methods to treat them'''
+    '''A class which contains a set of partials and methods to treat them from a SDIF file'''
 
     def __init__(self, sdifpath):
         pydbm.meta.IO.__init__(self)
@@ -342,6 +342,7 @@ class Partial(pydbm.meta.IO):
 
 
 class PolygonGroup(pydbm.meta.IO):
+    '''A container for a set of Polygon instances'''
     
     def __init__(self, sdif_in):
         self.polygons = []
@@ -358,7 +359,8 @@ class PolygonGroup(pydbm.meta.IO):
             self.polygons.append(P)
 
 class Polygon(object):
-
+    '''A class for time-frequency regions via SDIF'''
+    
     def __init__(self):
 
         self.matrix_types = ['clss', 'dura', 'freq', 'pnts']
@@ -391,7 +393,6 @@ class Polygon(object):
         '''Format params of a sdif_frame'''
 
         self.params = {} 
-
         for matrix in sdif_frame:
 
             for ind, ts in enumerate(self.matrix_types):
@@ -400,7 +401,7 @@ class Polygon(object):
                     self.params[ts] = matrix.get_data().copy()
 
     def pip(self, x, y):
-        '''Test whether a point is inside a polygon'''
+        '''Test whether a point (x, y) is inside a polygon'''
 
         n = len(self.tfPoints)
         inside = False
@@ -420,7 +421,10 @@ class Polygon(object):
         return inside
 
     def getPolyHull(self, fs, hop, fftsize):
-        '''Get the coordinates of points that fall within the polygon for a hypothetical TF grid'''
+        '''Get the coordinates of points that fall within the polygon for a hypothetical TF grid
+           fs := sample rate
+           hop := hop size
+           fftsize := fft size'''
 
         #snap polygon points to a hypothetical TF grid, i.e. (sec, Hz) => (hop, bin)
         self.tfPoints = np.zeros(len(self.points), dtype=[('hop', int), ('bin', int)])
@@ -462,7 +466,7 @@ class Polygon(object):
 ############################################
 
 class Score(object):
-    '''An object for containing ordered symbolic data'''
+    '''An object for containing ordered symbolic data from musicXML'''
 
     def __init__(self, musicXMLpath):
         self.XMLtree = etree.parse(musicXMLpath)
@@ -479,7 +483,8 @@ class Score(object):
                'C9': 120, 'C#9': 121, 'D9': 122, 'D#9': 123, 'E9': 124, 'F9': 125, 'F#9': 126, 'G9': 127}
     
     def getParts(self):
-
+        '''Retrieve a list of Part instances from a Score'''
+        
         self.parts = []
         root = self.XMLtree.getroot()
         

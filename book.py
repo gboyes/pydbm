@@ -17,7 +17,6 @@
 
 import time
 import copy
-import copy
 
 import numpy as np
 import scipy.linalg as linalg
@@ -25,7 +24,7 @@ import scipy.signal as sig
 import scipy.fftpack as fftpack
 
 import pysdif
-import scikits.audiolab
+import scikits.audiolab as audiolab
 import numpy.lib.recfunctions as rfn
 import matplotlib.pyplot as plt
 
@@ -35,7 +34,6 @@ import pydbm.utils
 #idea: deal with statistics of atoms?  Assume a model is a distribution of elements with mean std etc.
 
 class Book(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
-
     '''Time-Frequency synthesis Book'''
 
     def __init__(self, maxnum, dtype, fs):
@@ -100,6 +98,10 @@ class Book(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
         return C
 
     def synthesize(self, synthtype='default', kwargs={}):
+        '''Synthesize the model
+           synthtype := method of synthesis, so far one of ['default', 'FM', 'harmonic', 'disintegrate']
+           kwargs := a python dictionary of parameter names and values needed for a synthesis type'''
+ 
         out = np.zeros(max(self.atoms['duration']) + max(self.atoms['onset']))
         
         if synthtype == 'default':
@@ -137,6 +139,9 @@ class Book(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
         return out
     
     def wivigram(self, hop, fftsize, plot=False):
+        '''Wivigram, i.e. sum of Wigner-Ville distributions for the atoms in a book
+           hop := hop size
+           fftsize := fft size'''
         
         W = np.zeros((fftsize, np.ceil(max(self.atoms['onset'] + self.atoms['duration']) / float(hop))))
         
@@ -166,7 +171,6 @@ class Book(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
         S.sort(order='mag')
         S = S[::-1]
         S = S[0:num]
-        
         M = np.zeros((num, num))
         mx = np.max(S['duration'] + S['onset'])
 
@@ -186,7 +190,9 @@ class Book(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
         return M
 
     def agglomerate(self, M, thresh):
-        '''Agglomerate a cross-correlation matrix'''
+        '''Agglomerate a cross-correlation matrix
+           M := cross-correlation matrix
+           thresh := threshold coefficient'''
         
         #now the Boolean                                                                                
         M_ = M > thresh
@@ -245,6 +251,10 @@ class SpectralBook(Book):
         self.atoms = np.zeros(maxnum, dtype=dtype)
 
     def synthesize(self, synthtype='default', kwargs={}):
+        '''Synthesize the model
+           synthtype := method of synthesis, so far one of ['default', 'FM']
+           kwargs := a python dictionary of parameter names and values needed for a synthesis type'''
+        
         out = np.zeros(max(self.atoms['duration']) + max(self.atoms['onset']))
         
         if synthtype == 'default':
@@ -325,8 +335,8 @@ class SpectralBook(Book):
 
     #visualization
     def pianoroll(self, dsfactor):
-
-        '''A piano roll-like visualization of a SpectralBook's contents'''
+        '''A piano roll-like visualization of a SpectralBook's contents
+           dsfactor := downsampling factor of the visualization'''
 
         out = np.zeros((len(self.model) / dsfactor, max(self.hz2midi(self.atoms['omega'] * self.sampleRate))))
         s = np.unique(self.atoms['index'][1])
@@ -351,7 +361,8 @@ class SoundgrainBook(pydbm.meta.Group, pydbm.meta.IO):
         self.atoms['type'] = 'soundgrain'
 
     def synthesize(self):
-        
+        '''Make the linear combination of soundgrains'''
+           
         out = np.zeros(max(self.atoms['onset'] + self.atoms['duration']))
 
         for i in xrange(len(self.atoms)):
@@ -378,29 +389,21 @@ class SoundgrainBook(pydbm.meta.Group, pydbm.meta.IO):
 
 
         f.add_frame_type('XADS', 'XSGM NewXSGM, XSLM NewXSLM')
-
         self.atoms.sort(order='onset')
-
         f.add_matrix_type('XSGM', 'onset, duration, corpus_index, file_index, norm, mag')
         f.add_matrix_type('XSLM', 'onset, duration, corpus_index, file_index, norm, midicents, velocity, mag')
-
         n = 0
         while n < len(self.atoms['onset']):
             t = self.atoms['onset'][n]
             frame = f.new_frame('XADS', t /float(self.sampleRate))
-
             c = 0
             for ind in np.where(self.atoms['onset'] == t)[0]:
                 N = self.atoms[ind]
-
                 if not labeled:
                     frame.add_matrix('XSGM', np.array([[N['onset'], N['duration'], N['corpus_index'], N['file_index'], N['norm'], N['mag']]]))
                 else:
                     frame.add_matrix('XSLM', np.array([[N['onset'], N['duration'], N['corpus_index'], N['file_index'], N['norm'], N['midicents'], N['velocity'], N['mag']]]))
-
                 c += 1
-    
             frame.write()
             n += c
-        
         f.close()

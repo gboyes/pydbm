@@ -130,7 +130,7 @@ class Utils(object):
         return  k.astype(int)
 
     def powerSpectrum(self, x, NFFT):
-        '''Return the power spectrum of time domain signal x, NFFT should be evem'''
+        '''Return the power spectrum of time domain signal x, NFFT should be even'''
         #return (abs(fftpack.fft(x, NFFT)) / (NFFT/2.))[0:NFFT/2]**2
         return (abs(fftpack.fft(x, NFFT)) / (NFFT))[0:NFFT]**2
         
@@ -168,6 +168,7 @@ class Utils(object):
 
     def trfbank(self, fs, nfft, lowfreq, linsc, logsc, nlinfilt, nlogfilt):
         """Compute triangular filterbank for MFCC computation."""
+        
         # Total number of filters
         nfilt = nlinfilt + nlogfilt
         freqs = np.zeros(nfilt+2)
@@ -197,7 +198,13 @@ class Utils(object):
         return fbank, freqs                                      
 
     def mfcc(self, x, Fs, win, hop, nfft, CC):
-        '''Mel-Frequency cepstral coefficients of signal x'''
+        '''Mel-Frequency cepstral coefficients of a signal
+           x := signal
+           Fs := sampling rate
+           win := window size
+           hop := hop size
+           nfft := fft size
+           CC := number of coefficients'''
 
         #filterbank parameters
         lowestFrequency = 133.3333
@@ -220,8 +227,6 @@ class Utils(object):
      
         preEmp = sig.lfilter(np.array([1, -.97]), 1, seg)
         fbank = self.trfbank(Fs, nfft, lowestFrequency, linearSpacing, logSpacing, linearFilters, logFilters)[0]
-     
-        #fftData = np.array(x) * w
         fftMag = np.abs(fftpack.fft(preEmp, nfft, axis=-1))
         earMag = np.log10(np.inner(fftMag, fbank) + 0.0000000001)
         ceps = fftpack.realtransforms.dct(earMag, type=2, norm='ortho', axis=-1)[:, 0:CC]
@@ -229,7 +234,10 @@ class Utils(object):
         return ceps, earMag
 
     def segmat(self, x, nwin, hop):
-        '''Make a segment matrix out of vector x'''
+        '''Make a segment matrix out of a vector
+           x := vector
+           nwin := window size
+           hop := hop size'''
 
         X = np.zeros((nwin, np.ceil(len(x)/float(hop))))
         pin = 0
@@ -240,9 +248,13 @@ class Utils(object):
         
         return X
 
-    '''Some useful transforms'''
-
     def stft(self, x, nwin, nfft, hop, w='hann'):
+        '''Short-time Fourier transform
+           x := signal
+           nwin := window size
+           nfft := fft size
+           hop := hop size
+           w := window type, one of ['hann', 'blackman', 'hamming']'''  
 
         windows = {'hann' :sig.hanning, 'blackman' : sig.blackman, 'hamming' : sig.hamming}
         win = windows[w](nwin)
@@ -251,14 +263,13 @@ class Utils(object):
         return X
 
     def stft_(self, x, W, NFFT, hop, w='hann'):
-        #this one is actually faster
-        '''Short-Time Fourier Transform                                                                                               
-        x -- input signal                                                                                       
-        W -- analysis window size                                                                                                 
-        NFFT -- FFT size                                                                                                          
-        hop -- hop size                                                                                                           
-        w -- name of window (hanning, blackman, hamming)                                                                          
-        '''
+        #this one is actually slightly faster
+        '''Short-time Fourier transform
+           x := signal
+           nwin := window size
+           nfft := fft size
+           hop := hop size
+           w := window type, one of ['hann', 'blackman', 'hamming']'''  
 
         L = len(x)
         x = np.concatenate((np.zeros(W), x, W - np.zeros(np.mod(L, hop))))

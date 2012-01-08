@@ -79,6 +79,7 @@ class Group(object):
 
         return C
 
+    #FIX: structured indexing, add flattening and popping 
     def flatten(self):
         pass
 
@@ -156,11 +157,8 @@ class IO(Types):
         data = [[] for k in type_string_list]
         
         for frame in sdif_file:
-
             for matrix in frame:
-
                 for ind, ts in enumerate(type_string_list):
-
                     if matrix.signature == ts:
                         data[ind].append((frame.time, matrix.get_data().copy()))
 
@@ -169,14 +167,10 @@ class IO(Types):
 
         for indx, d in enumerate(data):
             c = 0
-    
             for i in xrange(len(d)):
-
                 if len(d[i][1]) == 0:
                     continue
-
                 tim = d[i][0]
-
                 for q in xrange(len(d[i][1])):
                     r = [k for k in d[i][1][q]]
                     r.insert(0, tim)
@@ -205,7 +199,8 @@ class IO(Types):
 ################################## 
 
 class Spectral(Types):
-
+    '''Typical spectral tools'''
+    
     def __init__(self):
         Types.__init__(self)
 
