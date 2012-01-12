@@ -156,8 +156,8 @@ class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
 
         self.atoms = rfn.stack_arrays((self.atoms, d)).data
 
-    def addPolygon(self, Poly, dtype, scale, nbins, hop, **kwargs)
-        '''Add a set of atoms for a give Polygon instance''':
+    def addPolygon(self, Poly, dtype, scale, nbins, hop, **kwargs):
+        '''Add a set of atoms for a give Polygon instance'''
 
         Poly.getPolyHull(self.sampleRate, hop, nbins)
 

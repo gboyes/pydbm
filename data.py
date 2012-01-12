@@ -205,8 +205,6 @@ class Corpus(pydbm.meta.IO):
         pydbm.meta.IO.__init__(self)
         self.directory = directory
         self.getSoundfiles()
-     
-        #here it would be good to define desriptor types such that a number of descriptors could be obtained at run time
 
     def num(self):
         return len(self.soundfiles)
