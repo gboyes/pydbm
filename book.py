@@ -24,9 +24,8 @@ import scipy.signal as sig
 import scipy.fftpack as fftpack
 
 import pysdif
-import scikits.audiolab as audiolab
+import audiolab
 import numpy.lib.recfunctions as rfn
-import matplotlib.pyplot as plt
 
 import pydbm.meta
 import pydbm.utils
@@ -151,12 +150,6 @@ class Book(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
             a_ *= a['mag']
             w = self.dwvd(sig.hilbert(a_), hop, fftsize)
             W[0:fftsize, np.floor(a['onset'] / float(hop)): np.floor(a['onset'] / float(hop)) + np.shape(w)[1]] += np.abs(w)
-
-        if plot:
-            p = plt.axes()
-            p.imshow(W, interpolation=None, aspect='auto', origin='lower', cmap='Greys', extent=[0., np.shape(W)[1] * float(hop) / self.sampleRate, 0., 0.5 * self.sampleRate])
-            p.set_xlabel('Time (s)')
-            p.set_ylabel("Frequency (Hz)")
 
         return W
 

@@ -25,7 +25,7 @@ import scipy.fftpack as fftpack
 import scipy.linalg as linalg
 import numpy.lib.recfunctions as rfn
 
-import scikits.audiolab
+import audiolab
 import pysdif
 
 import pydbm.atom
@@ -122,16 +122,16 @@ class IO(Types):
 
         Types.__init__(self)
         
-        self.informats = {'.wav' : scikits.audiolab.wavread,
-                   '.aiff' : scikits.audiolab.aiffread, '.aif' : scikits.audiolab.aiffread,
-                   '.au' : scikits.audiolab.auread}
+        self.informats = {'.wav' : audiolab.wavread,
+                   '.aiff' : audiolab.aiffread, '.aif' : audiolab.aiffread,
+                   '.au' : audiolab.auread}
 
-        self.outformats = {'.wav' : scikits.audiolab.wavwrite,
-                   '.aiff' : scikits.audiolab.aiffwrite, '.aif' : scikits.audiolab.aiffwrite,
-                   '.au' : scikits.audiolab.auwrite}
+        self.outformats = {'.wav' : audiolab.wavwrite,
+                   '.aiff' : audiolab.aiffwrite, '.aif' : audiolab.aiffwrite,
+                   '.au' : audiolab.auwrite}
 
     def readAudio(self, path):
-        '''General wrapper for scikits.audiolab read functions
+        '''General wrapper for audiolab read functions
            path := path to file'''
 
         f = os.path.splitext(path)
@@ -140,7 +140,7 @@ class IO(Types):
         return a[0], a[1] 
 
     def writeAudio(self, x, path, fs, format='.aiff'):
-        '''General wrapper for scikits.audiolab write functions
+        '''General wrapper for audiolab write functions
            x := signal
            path := path to new file
            fs := sample rate
