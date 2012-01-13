@@ -1340,13 +1340,20 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
 
     #a pruning method based on a polygon
     def addPolygon(self, signal, win, Poly, nbins, hop, nbest):
+        '''Prune the contents of a SoundDatabase based on a Polygon instance
+           signal := analysis target signal
+           win := window size
+           Poly := Polygon instance
+           nbins := fft size
+           hop := hop size
+           nbest := take this number of 'best' atoms'''
 
         Poly.getPolyHull(self.sampleRate, hop, nbins)
         cg = 0.49951171875
         onset = min(Poly.polyHull['hop']) * hop
         dtype = pydbm.atom.SoundgrainGen().dictionaryType
 
-        X = self.stft(signal, win, nbins, hop, w='hann')
+        X = self.stft_(signal, win, nbins, hop, w='hann')
         R = X[Poly.polyHull['bin'], Poly.polyHull['hop']]
         R_ = 2. * abs(R) / win / cg
 
@@ -1420,6 +1427,10 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
         self.count()
 
     def mp(self, signal, cmax, srr_thresh):
+        '''Matching pursuit using a SoundgrainDictionary
+           signal := analysis target
+           cmax := max number of atoms in the analysis
+           srr_thresh := signal-to-residual threshold cutoff'''
 
         #initialize
         dtype = self.atoms.dtype.descr
@@ -1488,7 +1499,11 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
 
     def tvmp(self, signal, cmax, srr_thresh, globscalar):
 
-        '''Experimental variant of MP that does not re-scale the samples'''
+        '''Experimental variant of MP that does not re-scale the samples
+           signal := analysis target
+           cmax := max number of atoms in the book
+           srr_thresh := signal-to-residial ratio cutoff threshold
+           globscalar := reduce the gain of all atoms in the dictionary by this scalar'''
 
         #initialize
         dtype = self.atoms.dtype.descr
@@ -1560,6 +1575,12 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
         return out, signal, M
 
     def mpc(self, signal, cmax, srr_thresh, maxsimul, mindistance):
+        '''Matching pursuit with max simultaneous atoms and minimum distance between atom constraints
+           signal := analysis target
+           cmax := max number of atoms in the book
+           srr_thresh := signal-to-residial ratio cutoff threshold
+           maxsimul := max number of simultaneous atoms
+           mindistance := minimum difference between prospective atoms and atoms already selected'''
 
         dtype = self.atoms.dtype.descr
         dtype.append(('mag', float))
@@ -1638,7 +1659,7 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
 
     #FIX 
     def mp_stereo(self, signal, cmax, srr_thresh):
-        '''Matching Pursuit for stereo sound grains'''
+        '''Matching Pursuit for stereo soundgrains'''
 
         #initialize
         dtype = self.atoms.dtype.descr

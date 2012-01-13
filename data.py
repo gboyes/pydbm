@@ -192,10 +192,12 @@ class InstrumentSubspace(pydbm.meta.IO, pydbm.meta.Spectral, pydbm.utils.Utils):
 ######################################################################################################
 class SoundDatabase(pydbm.meta.IO):
 
-    def __init__(self, list_of_corpora):
+    '''A container for Corpus instances'''
+
+    def __init__(self):
         pydbm.meta.IO.__init__(self)
-        self.corpora = [Corpus(k) for k in list_of_corpora]
-        
+        self.corpora = []
+             
     def num(self):
         sum([C.num() for C in self.corpora]) 
 
@@ -204,18 +206,15 @@ class Corpus(pydbm.meta.IO):
     def __init__(self, directory):
         pydbm.meta.IO.__init__(self)
         self.directory = directory
-        self.getSoundfiles()
+        self.soundfiles = {}
 
     def num(self):
         return len(self.soundfiles)
 
-    def getSoundfiles(self):
-        
-        self.soundfiles = []
+    def getAllSoundfiles(self):
+        '''Add all of the sound files in the directory to a Corpus instance'''  
         
         #get only the soundfiles, avoid anything else in the dir
-        #d = os.listdir(self.directory)
-
         d = [q for q in os.listdir(self.directory) if q[0] != '.']
         self.fileDescriptors = np.zeros(len(d), dtype=[('file_index', int), ('length', int), ('sampleRate', int), ('norm', float)])
         
@@ -234,16 +233,42 @@ class Corpus(pydbm.meta.IO):
             i += 1
             k += 1
 
-            self.soundfiles.append(val)
+            self.soundfiles[k] = val
         
         self.fileDescriptors = self.fileDescriptors[0:i]
 
+    def getSoundfiles(self, file_list):
+        '''Add specific audio files in the directory to a Corpus instance'''
+
+        #get only the soundfiles, avoid anything else in the dir
+        self.fileDescriptors = np.zeros(len(file_list), dtype=[('file_index', int), ('length', int), ('sampleRate', int), ('norm', float)])
+
+        d = [q for q in os.listdir(self.directory) if q[0] != '.']
+        indices = [[i for i in range(len(d)) if d[i] == f][0] for f in file_list] 
+        
+        i = 0
+        for ind, f in enumerate(file_list):
+            
+            if not any([os.path.splitext(f)[1].lower() == p for p in ['.aif', '.wav', '.aiff', '.au']]):
+                continue
+
+            x = self.readAudio(self.directory +'/'+ f)
+            self.fileDescriptors['file_index'][i] = indices[ind]
+            self.fileDescriptors['length'][i] = len(x[0])
+            self.fileDescriptors['sampleRate'][i] = x[1]
+            self.fileDescriptors['norm'][i] = linalg.norm(x[0])
+            i += 1
+
+            self.soundfiles[indices[ind]] = f
+        
+        self.fileDescriptors = self.fileDescriptors[0:i]
     
     def getSignalDescriptors(self):
         '''Fill a database with signal descriptors for a sound corpus'''
-        #idea: user should be able to give a list of built-in descriptor types
 
-        self.signalDescriptors = {'norm' : np.zeros(sum(self.cardinality), dtype=float)}
+        #FIX: more descriptors here and methods to prune based on them in order to make this method useful
+
+        self.signalDescriptors = {'norm' : np.zeros(self.num(), dtype=float)}
 
         i = 0
         for indx, c in enumerate(self.soundfiles):
@@ -262,7 +287,7 @@ class Corpus(pydbm.meta.IO):
            where the first set of consecutive numbers is midicents and the second is midi velocity'''
 
         #this should be made more flexible
-        self.labelDescriptors = {'midicents' : np.zeros(sum(self.cardinality), dtype=int), 'velocity' : np.zeros(sum(self.cardinality), dtype=int)}
+        self.labelDescriptors = {'midicents' : np.zeros(sum(self.num()), dtype=int), 'velocity' : np.zeros(sum(self.num()), dtype=int)}
 
         i = 0
         for c in self.soundfiles:
@@ -277,7 +302,6 @@ class Corpus(pydbm.meta.IO):
 
                 i += 1
       
-
 #Partial helper classes#
 ########################
 
