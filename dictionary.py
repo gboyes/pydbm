@@ -34,8 +34,6 @@ import pydbm.data
 import pydbm.book
 import pydbm.utils
 
-#FIX: module needs some cleanup and refactoring
-
 #most basic dictionary#
 #######################
 class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
@@ -1332,7 +1330,21 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
 
         self.sampleRate = fs
         self.SoundDatabase = SoundDatabase
-        self.atoms = np.array([], dtype=[('index', 'i4', (1, ))])
+        #self.atoms = np.array([], dtype=[('index', 'i4', (1, ))])
+        self.atoms = np.array([], dtype=[('index', int)])
+
+    def __add__(self, D):
+
+        C = copy.deepcopy(self)
+        Q = copy.deepcopy(D)
+        Q.atoms['corpus_index'] += max(C.atoms['corpus_index']) + 1 #need to update the corpus indices
+
+        C.atoms = rfn.stack_arrays((self.atoms, Q.atoms)).data
+        for c in Q.SoundDatabase.corpora:
+            C.SoundDatabase.corpora.append(c)
+
+        C.count()
+        return C
 
     def count(self):
         for i in xrange(self.num()):
@@ -1364,10 +1376,10 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
 
         for cind, C in enumerate(self.SoundDatabase.corpora):
 
-            z = np.zeros(len(C.soundfiles))
+            z = np.zeros(len(C.soundfiles.values()))
             select = np.array([])
 
-            for ind, name in enumerate(C.soundfiles):
+            for ind, name in enumerate(C.soundfiles.values()):
 
                 y, fsa = self.readAudio(C.directory + '/' + name)
                 Y = self.stft(y, win, nbins, hop, w='hann')

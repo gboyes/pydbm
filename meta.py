@@ -151,7 +151,7 @@ class IO(Types):
     def sdif2array(self, sdif_in, type_string_list):
         '''Make an SDIF file into a python dictionary of ndarrays separated by matrix type
            sdif_in := SDIF file to read
-           type_string_list := SDIF matrix types to be extracted (these need to be defined in pydbm.data.Type.sdifTypes_in)''' 
+           type_string_list := SDIF matrix types to be extracted (these need to be defined in pydbm.data.Type.sdifTypes)''' 
 
         sdif_file = pysdif.SdifFile(sdif_in)
         data = [[] for k in type_string_list]

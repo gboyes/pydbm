@@ -33,5 +33,5 @@ x_[0:len(x)] = x
 g = max(abs(x_)) * 0.005
 
 #mod, res, M = D.tvmp(x_.copy(), 100, 35, g)
-mod, res, M = D.mp(x_.copy(), 100, 35)
+mod, res, M = D.mp(x_.copy(), 30, 35)
 audiolab.wavwrite(mod[0:len(x)], '/Users/grahamboyes/Desktop/norescaleMP.wav', fs)
