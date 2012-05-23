@@ -400,3 +400,14 @@ class SoundgrainBook(pydbm.meta.Group, pydbm.meta.IO):
             frame.write()
             n += c
         f.close()
+
+class InstrumentSoundgrainBook(SoundgrainBook):
+
+    def __init__(self, fs, SoundDatabase, maxnum):
+        SoundgrainBook.__init__(self, fs, SoundDatabase, maxnum)
+        dtype = self.atomGenTable['soundgrain'].bookType
+        dtype.append(('velocity', int))
+        dtype.append(('midicent', int))
+        self.atoms = np.zeros(maxnum, dtype=dtype)
+        self.atoms['type'] = 'soundgrain'
+        

@@ -48,6 +48,11 @@ class Types(object):
         #these are `input' types obtained by reading SDIFs
         self.sdifTypes = {'1TRC' : [('time', float), ('index', int), ('frequency', float), ('amplitude', float), ('phase', float)],
                              'XTRD' : [('time', float), ('val1', float), ('val2', float)],
+                             '1CTR' : [('time', float), ('mxsa', float), ('mntd', float), ('mxps', float), ('mxvs', float)],
+                             'mxsa' : [('time', float), ('max_simultaneous_atoms', float)],
+                             'mntd' : [('time', float), ('min_time_distance', float)],
+                             'mxps' : [('time', float), ('max_pitch_slope', float)],
+                             'mxvs' : [('time', float), ('max_velocity_slope', float)],
                              'XASD' : [('time', float), ('val1', float), ('val2', float)],
                              'XSGR' : [('time', float), ('onset', int), ('corpus_index', int), ('file_index', int), ('norm', float)],
                              'XSLM' : [('time', float), ('index', int), ('onset', int), ('duration', int), ('corpus_index', int), ('file_index', int), ('norm', float), ('midicents', int), ('velocity', int), ('mag', float)],

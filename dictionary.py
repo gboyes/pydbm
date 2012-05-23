@@ -25,6 +25,7 @@ import numpy as np
 import scipy.fftpack as fftpack
 import scipy.linalg as linalg
 import scipy.interpolate as interpolate
+import scipy.cluster.vq as vq
 import pysdif
 import numpy.lib.recfunctions as rfn
 
@@ -36,6 +37,7 @@ import pydbm.utils
 
 #most basic dictionary#
 #######################
+
 class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
     '''Time-frequency analysis dictionary'''
 
@@ -155,7 +157,6 @@ class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
         self.atoms = rfn.stack_arrays((self.atoms, d)).data
 
     def addPolygon(self, Poly, dtype, scale, nbins, hop, **kwargs):
-        '''Add a set of atoms for a give Polygon instance'''
 
         Poly.getPolyHull(self.sampleRate, hop, nbins)
 
@@ -1323,28 +1324,14 @@ class BlockDictionary(pydbm.meta.Types, pydbm.utils.Utils):
         
 class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
 
-    '''Dictionary class for corpus-based synthesis'''
+    '''Dictionary for corpus-based synthesis'''
 
     def __init__(self, fs, SoundDatabase):
         pydbm.meta.IO.__init__(self)
 
         self.sampleRate = fs
         self.SoundDatabase = SoundDatabase
-        #self.atoms = np.array([], dtype=[('index', 'i4', (1, ))])
-        self.atoms = np.array([], dtype=[('index', int)])
-
-    def __add__(self, D):
-
-        C = copy.deepcopy(self)
-        Q = copy.deepcopy(D)
-        Q.atoms['corpus_index'] += max(C.atoms['corpus_index']) + 1 #need to update the corpus indices
-
-        C.atoms = rfn.stack_arrays((self.atoms, Q.atoms)).data
-        for c in Q.SoundDatabase.corpora:
-            C.SoundDatabase.corpora.append(c)
-
-        C.count()
-        return C
+        self.atoms = np.array([], dtype=[('index', 'i4', (1, ))])
 
     def count(self):
         for i in xrange(self.num()):
@@ -1352,20 +1339,13 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
 
     #a pruning method based on a polygon
     def addPolygon(self, signal, win, Poly, nbins, hop, nbest):
-        '''Prune the contents of a SoundDatabase based on a Polygon instance
-           signal := analysis target signal
-           win := window size
-           Poly := Polygon instance
-           nbins := fft size
-           hop := hop size
-           nbest := take this number of 'best' atoms'''
 
         Poly.getPolyHull(self.sampleRate, hop, nbins)
         cg = 0.49951171875
         onset = min(Poly.polyHull['hop']) * hop
         dtype = pydbm.atom.SoundgrainGen().dictionaryType
 
-        X = self.stft_(signal, win, nbins, hop, w='hann')
+        X = self.stft(signal, win, nbins, hop, w='hann')
         R = X[Poly.polyHull['bin'], Poly.polyHull['hop']]
         R_ = 2. * abs(R) / win / cg
 
@@ -1376,10 +1356,10 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
 
         for cind, C in enumerate(self.SoundDatabase.corpora):
 
-            z = np.zeros(len(C.soundfiles.values()))
+            z = np.zeros(len(C.soundfiles))
             select = np.array([])
 
-            for ind, name in enumerate(C.soundfiles.values()):
+            for ind, name in enumerate(C.soundfiles):
 
                 y, fsa = self.readAudio(C.directory + '/' + name)
                 Y = self.stft(y, win, nbins, hop, w='hann')
@@ -1439,10 +1419,6 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
         self.count()
 
     def mp(self, signal, cmax, srr_thresh):
-        '''Matching pursuit using a SoundgrainDictionary
-           signal := analysis target
-           cmax := max number of atoms in the analysis
-           srr_thresh := signal-to-residual threshold cutoff'''
 
         #initialize
         dtype = self.atoms.dtype.descr
@@ -1511,11 +1487,7 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
 
     def tvmp(self, signal, cmax, srr_thresh, globscalar):
 
-        '''Experimental variant of MP that does not re-scale the samples
-           signal := analysis target
-           cmax := max number of atoms in the book
-           srr_thresh := signal-to-residial ratio cutoff threshold
-           globscalar := reduce the gain of all atoms in the dictionary by this scalar'''
+        '''Experimental variant of MP that does not re-scale the samples'''
 
         #initialize
         dtype = self.atoms.dtype.descr
@@ -1531,6 +1503,7 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
         max_mag = np.zeros(len(self.atoms))
         max_ind = np.zeros(len(self.atoms))
         up_ind = np.arange(len(self.atoms))
+        last_indxs = [] #hack
         max_scale = max(self.atoms['duration'])
 
         #breaking conditions
@@ -1550,7 +1523,21 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
                 max_mag[cnt] = a    
                 
             #get and remove maximally correlated atom
-            indx = np.argmax(max_mag)
+            
+            dxs = np.argsort(max_mag)[::-1]
+
+            indx = None
+            for dx in dxs:
+                if dx not in last_indxs:
+                    indx = dx
+                    break
+                
+            if not indx:
+                print('No admissible atoms')
+                break
+            
+            #indx = np.argmax(max_mag)
+            print(indx)
 
             a = max_mag[indx]
             atom = self.readAudio(self.SoundDatabase.corpora[self.atoms['corpus_index'][indx]].directory + '/' + self.SoundDatabase.corpora[self.atoms['corpus_index'][indx]].soundfiles[self.atoms['file_index'][indx]])[0]  
@@ -1571,6 +1558,8 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
             srr = 10 * np.log10(linalg.norm(out)**2 / linalg.norm(signal)**2)
             perc = linalg.norm(signal)**2 / start_norm**2
             if perc > start:
+                print('residual increasing....')
+                print(perc)
                 break
             start = perc
   
@@ -1581,18 +1570,15 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
             max_mag[up_ind] = 0.
 
             c_cnt += 1
+            last_indxs.append(indx)
 
         M.atoms = M.atoms[0:c_cnt]
+        out /= max(abs(out))
+        out *= 0.95
 
         return out, signal, M
 
     def mpc(self, signal, cmax, srr_thresh, maxsimul, mindistance):
-        '''Matching pursuit with max simultaneous atoms and minimum distance between atom constraints
-           signal := analysis target
-           cmax := max number of atoms in the book
-           srr_thresh := signal-to-residial ratio cutoff threshold
-           maxsimul := max number of simultaneous atoms
-           mindistance := minimum difference between prospective atoms and atoms already selected'''
 
         dtype = self.atoms.dtype.descr
         dtype.append(('mag', float))
@@ -1632,11 +1618,13 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
                     if constraint1 and constraint2:
                         indx = magi
                         a = max_mag[indx]
-                        up_ind = np.intersect1d(np.where(self.atoms['onset'] >= self.atoms['onset'][indx] - max_scale)[0],
-                                            np.where(self.atoms['onset'] < self.atoms['onset'][indx] + max_scale)[0])
+                        #up_ind = np.intersect1d(np.where(self.atoms['onset'] >= self.atoms['onset'][indx] - max_scale)[0],
+                        #                    np.where(self.atoms['onset'] < self.atoms['onset'][indx] + max_scale)[0])
                         max_mag[up_ind] = 0.
-                        up_ind = up_ind[np.union1d(np.where(abs(self.atoms['onset'] - self.atoms['onset'][magi]) >= mindistance)[0],
-                                                   np.where(self.atoms['onset'] in M.atoms['onset'][0:c_cnt])[0])]
+
+                        #fix this to optimize 
+                        #up_ind = up_ind[np.union1d(np.where(abs(self.atoms['onset'] - self.atoms['onset'][magi]) >= mindistance)[0],
+                        #                           np.where(self.atoms['onset'] in M.atoms['onset'][0:c_cnt])[0])]
                         break
 
             if not indx:
@@ -1666,12 +1654,14 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
             c_cnt += 1
 
         M.atoms = M.atoms[0:c_cnt]
+        out /= max(abs(out))
+        out *= 0.95
 
         return out, signal, M
 
-    #FIX 
+    #FIX THIS
     def mp_stereo(self, signal, cmax, srr_thresh):
-        '''Matching Pursuit for stereo soundgrains'''
+        '''Matching Pursuit for stereo sound grains'''
 
         #initialize
         dtype = self.atoms.dtype.descr
@@ -1741,4 +1731,248 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
         return out, signal, M
 
         
+class InstrumentSoundgrainDictionary(SoundgrainDictionary):
 
+    '''Dictionary for corpus-based synthesis where instrument specific samples are involved'''
+
+    def __init__(self, fs, SoundDatabase):
+        SoundgrainDictionary.__init__(self, fs, SoundDatabase)
+
+    def addCorpus(self, onsets, corpus_index):
+        '''add a Corpus to the dictonary at specific onsets'''
+
+        N = np.array(onsets)
+        dtype = pydbm.atom.SoundgrainGen().dictionaryType
+        dtype.append(('velocity', int))
+        dtype.append(('midicent', int))
+        
+        da = np.zeros(self.SoundDatabase.corpora[corpus_index].num() * len(N), dtype)
+        da['type'] = 'soundgrain'
+
+        p = 0
+        for n in N:
+
+            for i in xrange(self.SoundDatabase.corpora[corpus_index].num()):
+
+                da['corpus_index'][p] = corpus_index
+                da['file_index'][p] = self.SoundDatabase.corpora[corpus_index].fileDescriptors['file_index'][i]
+                da['onset'][p] = n
+                da['duration'][p] = self.SoundDatabase.corpora[corpus_index].fileDescriptors['length'][i]
+                da['norm'][p] = self.SoundDatabase.corpora[corpus_index].fileDescriptors['norm'][i]
+                da['midicent'][p] = self.SoundDatabase.corpora[corpus_index].fileDescriptors['midicent'][i]
+                da['velocity'][p] = self.SoundDatabase.corpora[corpus_index].fileDescriptors['velocity'][i]
+
+                p += 1
+
+        self.atoms = rfn.stack_arrays((self.atoms, da)).data
+        self.count()
+
+    def mpc(self, signal, cmax, srr_thresh, constraint_sdif, tv=False, globscalar=1.0):
+
+        M = pydbm.book.InstrumentSoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
+
+        constraints = self.sdif2array(constraint_sdif, ['mxsa', 'mntd', 'mxps', 'mxvs'])
+        
+        out = np.zeros(len(signal), dtype=float)
+        max_mag = np.zeros(len(self.atoms))
+        max_ind = np.zeros(len(self.atoms))
+        up_ind = np.arange(len(self.atoms))
+        max_scale = max(self.atoms['duration'])
+        start_norm = linalg.norm(signal)
+        start = 1.0
+        srr = 0.
+        c_cnt = 0
+
+        if tv:
+            last_indxs= []
+
+        while (c_cnt < cmax) and (srr <= srr_thresh):
+            print(c_cnt)
+            if tv:
+                for cnt in up_ind:
+                    atom = self.readAudio(self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].directory + '/' + self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].soundfiles[self.atoms['file_index'][cnt]])[0]  
+                    a = np.inner(atom*globscalar, signal[self.atoms['onset'][cnt]:self.atoms['onset'][cnt]+self.atoms['duration'][cnt]])
+                    max_mag[cnt] = a
+                
+            else:
+                for cnt in up_ind:
+                    atom = self.readAudio(self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].directory + '/' + self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].soundfiles[self.atoms['file_index'][cnt]])[0]  
+                    a = np.inner(atom, signal[self.atoms['onset'][cnt]:self.atoms['onset'][cnt]+self.atoms['duration'][cnt]]) / self.atoms['norm'][cnt]
+                    max_mag[cnt] = a    
+
+            #Application of constraints
+            if c_cnt == 0:
+                indx = np.argmax(max_mag)
+                a = max_mag[indx]
+                up_ind = np.intersect1d(np.where(self.atoms['onset'] >= self.atoms['onset'][indx] - max_scale)[0],
+                                            np.where(self.atoms['onset'] < self.atoms['onset'][indx] + max_scale)[0])
+                max_mag[up_ind] = 0.
+                
+            else:
+                mag_sort = np.argsort(max_mag)[::-1]    
+                indx = None
+
+                for magi in mag_sort:
+
+                    if tv:
+                        if indx in last_indxs:
+                            print('This atom has already been used... continuing search...')
+                            continue
+
+                    #get the previous constraint
+                    timenow = self.atoms['onset'][magi] / self.sampleRate
+                    
+                    cinds = np.where(constraints['mxsa']['time'] <= timenow)[0]
+                    cind = max(cinds)
+                    
+                    numberAtomsNow = sum(np.where(M.atoms['onset'][0:c_cnt] == self.atoms['onset'][magi])[0])
+                    c1 = numberAtomsNow <= constraints['mxsa']['max_simultaneous_atoms'][cind]
+
+                    if c1:
+                        print('Simultaneous atoms constraint satisfied')
+                        cinds = np.where(constraints['mntd']['time'] <= timenow)[0]
+                        cind = max(cinds)
+                        c2 = all(abs(M.atoms['onset'][0:c_cnt] - self.atoms['onset'][magi]) >= constraints['mntd']['min_time_distance'][cind]) or self.atoms['onset'][magi] in M.atoms['onset'][0:c_cnt]
+
+                        if c2:
+                            print('Minimum time distance constraint satisfied')
+                            cinds = np.where(constraints['mxps']['time'] <= timenow)[0]
+
+                            #for the midicent
+                            cind = max(cinds)
+
+                            cinds = np.where(constraints['mxvs']['time'] <= timenow)[0]
+
+                            #for the velocity
+                            cindv = max(cinds)
+                            
+                            prev = np.where(M.atoms['onset'][0:c_cnt] < self.atoms['onset'][magi])[0]
+                            following = np.where(M.atoms['onset'][0:c_cnt] > self.atoms['onset'][magi])[0]
+
+                            if prev == None:
+                                c3_1 = True
+                                c3_3 = True
+                            elif len(prev) < 2:
+                                c3_1 = True
+                                c3_3 = True
+                            else:
+                                prev_o = np.unique(M.atoms[prev]['onset'])
+                                prev_o = np.sort(prev_o)
+                                prev_o = prev_o[::-1]
+                                mxprev_o = prev_o[0]
+                                mxprev_o_i = np.where(M.atoms['onset'] == mxprev_o)[0]
+
+                                if len(mxprev_o_i) > 1:
+                                    prev_atom = M.atoms[mxprev_o_i][np.argmin(abs(M.atoms[mxprev_o_i]['midicent'] - self.atoms[magi]['midicent']))]
+
+                                else:
+                                    mxprev_o = prev_o[1]
+                                    mxprev_o_i = np.where(M.atoms['onset'] == mxprev_o)[0]
+                                    if len(mxprev_o_i) > 1:
+                                        prev_atom = M.atoms[mxprev_o_i][np.argmin(abs(M.atoms[mxprev_o_i]['midicent'] - self.atoms[magi]['midicent']))]
+                                    else:
+                                        prev_atom = M.atoms[mxprev_o_i]
+
+                                den = float(self.atoms[magi]['onset'] - prev_atom['onset']) / self.sampleRate * 1000
+                                
+                                c3_1v = abs(self.atoms[magi]['midicent'] - prev_atom['midicent']) / den
+                                c3_3v = abs(self.atoms[magi]['velocity'] - prev_atom['velocity']) / den
+                                print('The current "backward" midicent slope is %f'%c3_1v)
+                                print('The current "backward" velocity slope is %f'%c3_3v)
+
+                                c3_1 = c3_1v <= constraints['mxps']['max_pitch_slope'][cind]
+                                c3_3 = c3_3v <= constraints['mxvs']['max_velocity_slope'][cindv]
+
+                            if following == None:
+                                c3_2 = True
+                                c3_4 = True
+                            elif len(following) < 2:
+                                c3_2 = True
+                                c3_4 = True
+                            else:
+                                following_o = np.unique(M.atoms[following]['onset'])
+                                following_o = np.sort(following_o)
+                                mxfollowing_o = following_o[0]
+                                mxfollowing_o_i = np.where(M.atoms['onset'] == mxfollowing_o)[0]
+
+                                if len(mxfollowing_o_i) > 1:
+                                    following_atom = M.atoms[mxfollowing_o_i][np.argmin(abs(M.atoms[mxfollowing_o_i]['midicent'] - self.atoms[magi]['midicent']))]
+
+                                else:
+                                    mxfollowing_o = following_o[1]
+                                    mxfollowing_o_i = np.where(M.atoms['onset'] == mxfollowing_o)[0]
+                                    if len(mxfollowing_o_i) > 1:
+                                        following_atom = M.atoms[mxfollowing_o_i][np.argmin(abs(M.atoms[mxfollowing_o_i]['midicent'] - self.atoms[magi]['midicent']))]
+                                    else:
+                                        following_atom = M.atoms[mxfollowing_o_i]
+
+                                den = float(following_atom['onset'] - self.atoms[magi]['onset']) / self.sampleRate * 1000
+                                c3_2v = abs(following_atom['midicent'] - self.atoms[magi]['midicent']) / den
+                                c3_4v = abs(following_atom['velocity'] - self.atoms[magi]['velocity']) / den
+                                print('The current "forward" midicent slope is %f'%c3_2v)
+                                print('The current "forward" velocity slope is %f'%c3_4v)
+                                c3_2 = c3_2v <= constraints['mxps']['max_pitch_slope'][cind]
+                                c3_4 = c3_4v <= constraints['mxvs']['max_velocity_slope'][cindv]
+
+                            
+                            if c3_1 and c3_2:
+                                print('Maximum pitch slope constriant satisfied')
+
+                                if c3_3 and c3_4:
+                                    print('Maximum velocity slope satisfied')
+
+                                    indx = magi      
+                                    a = max_mag[indx]
+                                    max_mag[up_ind] = 0.
+                                    break
+                
+            if not indx:
+                print('No atoms satisfy the given constraints')
+                break
+
+            if tv:
+                atom = self.readAudio(self.SoundDatabase.corpora[self.atoms['corpus_index'][indx]].directory + '/' + self.SoundDatabase.corpora[self.atoms['corpus_index'][indx]].soundfiles[self.atoms['file_index'][indx]])[0] 
+
+                signal[self.atoms['onset'][indx] : self.atoms['onset'][indx]+self.atoms['duration'][indx]] -= atom * globscalar
+                out[self.atoms['onset'][indx] : self.atoms['onset'][indx]+self.atoms['duration'][indx]] += atom * globscalar
+
+            else:
+
+                atom = self.readAudio(self.SoundDatabase.corpora[self.atoms['corpus_index'][indx]].directory + '/' + self.SoundDatabase.corpora[self.atoms['corpus_index'][indx]].soundfiles[self.atoms['file_index'][indx]])[0]  / self.atoms['norm'][indx]  
+
+                signal[self.atoms['onset'][indx] : self.atoms['onset'][indx]+self.atoms['duration'][indx]] -= atom * a
+                out[self.atoms['onset'][indx] : self.atoms['onset'][indx]+self.atoms['duration'][indx]] += atom * a
+            
+            #Store decomposition Values
+            M.atoms['type'][c_cnt] = 'soundgrain'
+            M.atoms['duration'][c_cnt] = self.atoms['duration'][indx]
+            M.atoms['onset'][c_cnt] = self.atoms['onset'][indx]
+            M.atoms['corpus_index'][c_cnt] = self.atoms['corpus_index'][indx]
+            M.atoms['file_index'][c_cnt] = self.atoms['file_index'][indx]
+            M.atoms['norm'][c_cnt] = self.atoms['norm'][indx]
+            M.atoms['mag'][c_cnt] = a
+            M.atoms['midicent'][c_cnt] = self.atoms['midicent'][indx]
+            M.atoms['velocity'][c_cnt] = self.atoms['velocity'][indx]
+
+            #Measure the change    
+            srr = 10 * np.log10(linalg.norm(out)**2 / linalg.norm(signal)**2) 
+            perc = linalg.norm(signal)**2 / start_norm**2
+            print(a**2 / start_norm**2)
+            print(perc)
+            print(srr)
+
+            if tv:
+                last_indxs.append(indx)
+                if perc > start:
+                    print('residual increasing....')
+                    print(perc)
+                    break
+                start = perc
+            
+            c_cnt += 1
+
+        M.atoms = M.atoms[0:c_cnt]
+        out /= max(abs(out))
+        out *= 0.95
+
+        return out, signal, M

@@ -301,7 +301,87 @@ class Corpus(pydbm.meta.IO):
                 self.labelDescriptors['velocity'][i] = eval(v.group())
 
                 i += 1
-      
+
+class InstrumentSoundgrainCorpus(Corpus):
+
+    def __init__(self, directory):
+        Corpus.__init__(self, directory)
+
+    def getAllSoundfiles(self, midiinfosdif):
+        '''Add all of the sound files in the directory to a Corpus instance'''
+
+        sdiff = pysdif.SdifFile(midiinfosdif)
+        midiinfo = sdiff.get_NVTs()
+        midiinfo_ = {}
+        for mi in midiinfo:
+            if mi['TableName'] == 'Velocity':
+                midiinfo_['Velocity'] = mi
+            elif mi['TableName'] == 'Midicent':
+                midiinfo_['Midicent'] = mi
+        
+        #get only the soundfiles, avoid anything else in the dir
+        d = [q for q in os.listdir(self.directory) if q[0] != '.']
+        self.fileDescriptors = np.zeros(len(d), dtype=[('file_index', int), ('length', int), ('sampleRate', int), ('norm', float), ('midicent', int), ('velocity', int)])
+        
+        i = 0
+        k = 0
+        for ind, val in enumerate(d):
+
+            if not any([os.path.splitext(val)[1].lower() == p for p in ['.aif', '.wav', '.aiff', '.au']]):
+                continue
+
+            x = self.readAudio(self.directory +'/'+ val)
+            self.fileDescriptors['file_index'][i] = k
+            self.fileDescriptors['length'][i] = len(x[0])
+            self.fileDescriptors['sampleRate'][i] = x[1]
+            self.fileDescriptors['norm'][i] = linalg.norm(x[0])
+            self.fileDescriptors['midicent'][i] = midiinfo_['Midicent'][val]
+            self.fileDescriptors['velocity'][i] = midiinfo_['Velocity'][val]
+            i += 1
+            k += 1
+
+            self.soundfiles[k] = val
+        
+        self.fileDescriptors = self.fileDescriptors[0:i]
+
+    def getSoundfiles(self, file_list, midiinfosdif):
+        '''Add specific audio files in the directory to a Corpus instance'''
+
+
+        sdiff = pysdif.SdifFile(midiinfosdif)
+        midiinfo = sdiff.get_NVTs()
+        midiinfo_ = {}
+        for mi in midiinfo:
+            if mi['TableName'] == 'Velocity':
+                midiinfo_['Velocity'] = mi
+            elif mi['TableName'] == 'Midicent':
+                midiinfo_['Midicent'] = mi
+
+        #get only the soundfiles, avoid anything else in the dir
+        self.fileDescriptors = np.zeros(len(file_list), dtype=[('file_index', int), ('length', int), ('sampleRate', int), ('norm', float), ('midicent', int), ('velocity', int)])
+
+        d = [q for q in os.listdir(self.directory) if q[0] != '.']
+        indices = [[i for i in range(len(d)) if d[i] == f][0] for f in file_list] 
+        
+        i = 0
+        for ind, f in enumerate(file_list):
+            
+            if not any([os.path.splitext(f)[1].lower() == p for p in ['.aif', '.wav', '.aiff', '.au']]):
+                continue
+
+            x = self.readAudio(self.directory +'/'+ f)
+            self.fileDescriptors['file_index'][i] = indices[ind]
+            self.fileDescriptors['length'][i] = len(x[0])
+            self.fileDescriptors['sampleRate'][i] = x[1]
+            self.fileDescriptors['norm'][i] = linalg.norm(x[0])
+            self.fileDescriptors['midicent'][i] = midiinfo_['Midicent'][f]
+            self.fileDescriptors['velocity'][i] = midiinfo_['Velocity'][f]
+            i += 1
+
+            self.soundfiles[indices[ind]] = f
+        
+        self.fileDescriptors = self.fileDescriptors[0:i]
+
 #Partial helper classes#
 ########################
 
