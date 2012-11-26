@@ -25,7 +25,7 @@ import scipy.fftpack as fftpack
 import scipy.linalg as linalg
 import numpy.lib.recfunctions as rfn
 
-import audiolab
+import scikits.audiolab as audiolab
 import pysdif
 
 import pydbm.atom

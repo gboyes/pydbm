@@ -24,7 +24,7 @@ import scipy.signal as sig
 import scipy.fftpack as fftpack
 
 import pysdif
-import audiolab
+import scikits.audiolab as audiolab
 import numpy.lib.recfunctions as rfn
 
 import pydbm.meta
