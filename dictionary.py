@@ -156,8 +156,8 @@ class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
 
         self.atoms = rfn.stack_arrays((self.atoms, d)).data
 
-    def addPolygon(self, Poly, dtype, scale, nbins, hop, **kwargs)
-        '''Add a set of atoms for a give Polygon instance''':
+    def addPolygon(self, Poly, dtype, scale, nbins, hop, **kwargs):
+        '''Add a set of atoms for a given Polygon instance'''
 
         Poly.getPolyHull(self.sampleRate, hop, nbins)
 
@@ -754,7 +754,7 @@ class SpecDictionary(Dictionary, pydbm.meta.Spectral, pydbm.utils.Utils):
         dtype.append(('mag', float))
         dtype.append(('phase', float))
         book = pydbm.book.SpectralBook(cmax * maxPeaks, dtype, self.sampleRate)
-        out = np.zeros(len(signal))
+        Out = np.zeros(len(signal))
 
         #place to hold analysis values
         max_mag = np.zeros(self.num())
@@ -1602,8 +1602,8 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
                         up_ind = np.intersect1d(np.where(self.atoms['onset'] >= self.atoms['onset'][indx] - max_scale)[0],
                                             np.where(self.atoms['onset'] < self.atoms['onset'][indx] + max_scale)[0])
                         max_mag[up_ind] = 0.
-                        up_ind = up_ind[np.union1d(np.where(abs(self.atoms['onset'] - self.atoms['onset'][magi]) >= mindistance)[0],
-                                                   np.where(self.atoms['onset'] in M.atoms['onset'][0:c_cnt])[0])]
+                        #up_ind = up_ind[np.union1d(np.where(abs(self.atoms['onset'] - self.atoms['onset'][magi]) >= mindistance)[0],
+                        #                           np.where(self.atoms['onset'] in M.atoms['onset'][0:c_cnt])[0])]
                         break
 
             if not indx:
