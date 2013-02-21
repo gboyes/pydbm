@@ -314,10 +314,10 @@ class InstrumentSoundgrainCorpus(Corpus):
         midiinfo = sdiff.get_NVTs()
         midiinfo_ = {}
         for mi in midiinfo:
-            if mi['TableName'] == 'Velocity':
-                midiinfo_['Velocity'] = mi
-            elif mi['TableName'] == 'Midicent':
-                midiinfo_['Midicent'] = mi
+            if mi['TableName'] == 'velocity':
+                midiinfo_['velocity'] = mi
+            elif mi['TableName'] == 'midicent':
+                midiinfo_['midicent'] = mi
         
         #get only the soundfiles, avoid anything else in the dir
         d = [q for q in os.listdir(self.directory) if q[0] != '.']
@@ -335,8 +335,8 @@ class InstrumentSoundgrainCorpus(Corpus):
             self.fileDescriptors['length'][i] = len(x[0])
             self.fileDescriptors['sampleRate'][i] = x[1]
             self.fileDescriptors['norm'][i] = linalg.norm(x[0])
-            self.fileDescriptors['midicent'][i] = midiinfo_['Midicent'][val]
-            self.fileDescriptors['velocity'][i] = midiinfo_['Velocity'][val]
+            self.fileDescriptors['midicent'][i] = midiinfo_['midicent'][val]
+            self.fileDescriptors['velocity'][i] = midiinfo_['velocity'][val]
             i += 1
             k += 1
 
@@ -352,10 +352,10 @@ class InstrumentSoundgrainCorpus(Corpus):
         midiinfo = sdiff.get_NVTs()
         midiinfo_ = {}
         for mi in midiinfo:
-            if mi['TableName'] == 'Velocity':
-                midiinfo_['Velocity'] = mi
-            elif mi['TableName'] == 'Midicent':
-                midiinfo_['Midicent'] = mi
+            if mi['TableName'] == 'velocity':
+                midiinfo_['velocity'] = mi
+            elif mi['TableName'] == 'midicent':
+                midiinfo_['midicent'] = mi
 
         #get only the soundfiles, avoid anything else in the dir
         self.fileDescriptors = np.zeros(len(file_list), dtype=[('file_index', int), ('length', int), ('sampleRate', int), ('norm', float), ('midicent', int), ('velocity', int)])
@@ -374,8 +374,8 @@ class InstrumentSoundgrainCorpus(Corpus):
             self.fileDescriptors['length'][i] = len(x[0])
             self.fileDescriptors['sampleRate'][i] = x[1]
             self.fileDescriptors['norm'][i] = linalg.norm(x[0])
-            self.fileDescriptors['midicent'][i] = midiinfo_['Midicent'][f]
-            self.fileDescriptors['velocity'][i] = midiinfo_['Velocity'][f]
+            self.fileDescriptors['midicent'][i] = midiinfo_['midicent'][f]
+            self.fileDescriptors['velocity'][i] = midiinfo_['velocity'][f]
             i += 1
 
             self.soundfiles[indices[ind]] = f

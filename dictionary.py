@@ -1972,7 +1972,90 @@ class InstrumentSoundgrainDictionary(SoundgrainDictionary):
             c_cnt += 1
 
         M.atoms = M.atoms[0:c_cnt]
-        out /= max(abs(out))
-        out *= 0.95
+        #out /= max(abs(out))
+        #out *= 0.95
+
+        return out, signal, M
+
+    def mpc_(self, signal, cmax, srr_thresh, maxsimul, mindistance):
+
+        dtype = self.atoms.dtype.descr
+        dtype.append(('mag', float))
+        M = pydbm.book.SoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
+        #M.atoms['onset'] = np.inf #set initial onsets to inf so that 0 onset is initially acceptable
+        out = np.zeros(len(signal), dtype=float)
+        max_mag = np.zeros(len(self.atoms))
+        max_ind = np.zeros(len(self.atoms))
+        up_ind = np.arange(len(self.atoms))
+        max_scale = max(self.atoms['duration'])
+        start_norm = linalg.norm(signal)
+        srr = 0.
+        c_cnt = 0
+
+        while (c_cnt < cmax) and (srr <= srr_thresh):
+            print(c_cnt)
+            for cnt in up_ind:
+                atom = self.readAudio(self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].directory + '/' + self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].soundfiles[self.atoms['file_index'][cnt]])[0]  
+                a = np.inner(atom, signal[self.atoms['onset'][cnt]:self.atoms['onset'][cnt]+self.atoms['duration'][cnt]]) / self.atoms['norm'][cnt]
+                max_mag[cnt] = a    
+
+            #Application of constraints
+            if c_cnt == 0:
+                indx = np.argmax(max_mag)
+                a = max_mag[indx]
+                up_ind = np.intersect1d(np.where(self.atoms['onset'] >= self.atoms['onset'][indx] - max_scale)[0],
+                                            np.where(self.atoms['onset'] < self.atoms['onset'][indx] + max_scale)[0])
+                max_mag[up_ind] = 0.
+                
+            else:
+                mag_sort = np.argsort(max_mag)[::-1]    
+                indx = None
+                for magi in mag_sort:
+                    constraint1 = sum(np.where(M.atoms['onset'][0:c_cnt] == self.atoms['onset'][magi])[0]) <= maxsimul
+                    constraint2 = all(abs(M.atoms['onset'][0:c_cnt] - self.atoms['onset'][magi]) >= mindistance) or self.atoms['onset'][magi] in M.atoms['onset'][0:c_cnt]
+                    
+                    if constraint1 and constraint2:
+                        indx = magi
+                        a = max_mag[indx]
+                        #up_ind = np.intersect1d(np.where(self.atoms['onset'] >= self.atoms['onset'][indx] - max_scale)[0],
+                        #                    np.where(self.atoms['onset'] < self.atoms['onset'][indx] + max_scale)[0])
+                        max_mag[up_ind] = 0.
+
+                        #fix this to optimize 
+                        #up_ind = up_ind[np.union1d(np.where(abs(self.atoms['onset'] - self.atoms['onset'][magi]) >= mindistance)[0],
+                        #                           np.where(self.atoms['onset'] in M.atoms['onset'][0:c_cnt])[0])]
+                        break
+
+            if not indx:
+                print('No atoms satisfy the given constraints')
+                break
+
+            atom = self.readAudio(self.SoundDatabase.corpora[self.atoms['corpus_index'][indx]].directory + '/' + self.SoundDatabase.corpora[self.atoms['corpus_index'][indx]].soundfiles[self.atoms['file_index'][indx]])[0]  / self.atoms['norm'][indx]  
+
+            signal[self.atoms['onset'][indx] : self.atoms['onset'][indx]+self.atoms['duration'][indx]] -= atom * a
+            out[self.atoms['onset'][indx] : self.atoms['onset'][indx]+self.atoms['duration'][indx]] += atom * a
+            
+            #Store decomposition Values
+            M.atoms['type'][c_cnt] = 'soundgrain'
+            M.atoms['duration'][c_cnt] = self.atoms['duration'][indx]
+            M.atoms['onset'][c_cnt] = self.atoms['onset'][indx]
+            M.atoms['corpus_index'][c_cnt] = self.atoms['corpus_index'][indx]
+            M.atoms['file_index'][c_cnt] = self.atoms['file_index'][indx]
+            M.atoms['norm'][c_cnt] = self.atoms['norm'][indx]
+            M.atoms['mag'][c_cnt] = a
+            M.atoms['midicent'][c_cnt] = self.atoms['midicent'][indx]
+            M.atoms['velocity'][c_cnt] = self.atoms['velocity'][indx]
+
+            #Measure the change    
+            srr = 10 * np.log10(linalg.norm(out)**2 / linalg.norm(signal)**2) 
+            print(a**2 / start_norm**2)
+            print(linalg.norm(signal)**2 / start_norm**2)
+            print(srr)
+            
+            c_cnt += 1
+
+        M.atoms = M.atoms[0:c_cnt]
+        #out /= max(abs(out))
+        #out *= 0.95
 
         return out, signal, M
