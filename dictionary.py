@@ -1981,7 +1981,7 @@ class InstrumentSoundgrainDictionary(SoundgrainDictionary):
 
         dtype = self.atoms.dtype.descr
         dtype.append(('mag', float))
-        M = pydbm.book.SoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
+        M = pydbm.book.InstrumentSoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
         #M.atoms['onset'] = np.inf #set initial onsets to inf so that 0 onset is initially acceptable
         out = np.zeros(len(signal), dtype=float)
         max_mag = np.zeros(len(self.atoms))
