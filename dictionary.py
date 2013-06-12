@@ -935,7 +935,7 @@ class SpecDictionary(Dictionary, pydbm.meta.Spectral, pydbm.utils.Utils):
     
 #Instrument-Specific Dictionaries#
 ##################################
-#FIX or scrap
+#TOFIX or TOREMOVE
 class InstrumentDictionary(pydbm.data.InstrumentSubspace, Dictionary):
 
     '''Class to build a dictionary of instrument-specific atoms with pursuits that consider these structures'''
@@ -1573,8 +1573,8 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
             last_indxs.append(indx)
 
         M.atoms = M.atoms[0:c_cnt]
-        out /= max(abs(out))
-        out *= 0.95
+        #out /= max(abs(out))
+        #out *= 0.95
 
         return out, signal, M
 
@@ -1654,8 +1654,8 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
             c_cnt += 1
 
         M.atoms = M.atoms[0:c_cnt]
-        out /= max(abs(out))
-        out *= 0.95
+        #out /= max(abs(out))
+        #out *= 0.95
 
         return out, signal, M
 
@@ -1777,7 +1777,7 @@ class InstrumentSoundgrainDictionary(SoundgrainDictionary):
         max_mag = np.zeros(len(self.atoms))
         max_ind = np.zeros(len(self.atoms))
         up_ind = np.arange(len(self.atoms))
-        max_scale = max(self.atoms['duration'])
+        max_scale = max(self.atoms['duration']) 
         start_norm = linalg.norm(signal)
         start = 1.0
         srr = 0.

@@ -147,7 +147,7 @@ class InstrumentSubspace(pydbm.meta.IO, pydbm.meta.Spectral, pydbm.utils.Utils):
 
                 a['amplitude'] *= 1./np.sqrt(np.sum(a['amplitude']**2))
 
-    #FIX
+    #TOFIX
     '''
     def cluster(self, total):
         
