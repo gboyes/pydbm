@@ -364,7 +364,7 @@ class Utils(object):
 
     def dwvd(self, x, hop, fftsize):
         '''Discrete Wigner-Ville distribution
-           x := signal (anaytical for best results)
+           x := signal (analytic for best results)
            hop := time-domain sampling factor
            fftsize := the number of spectral samples (note that the frequency of the kth bin is (0.5 * (k/fftsize) *  fs)''' 
 
