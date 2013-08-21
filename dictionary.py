@@ -1125,7 +1125,7 @@ dtype=self.atomGenTable[dtype].dictionaryType)
 
 #Block Dictionaries#
 ####################
-#remove this, add the functionality to regular dictionary?
+#remove this or add to the functionality to regular dictionary?
 
 class Block(pydbm.meta.Types):
     '''A high-level object describing a set of atoms with homogenous window parameters and varying time-frequency support defined by onsets and omegas'''
@@ -1257,7 +1257,7 @@ class BlockDictionary(pydbm.meta.Types, pydbm.utils.Utils):
 
                 for iom, omega in enumerate(block.omegas):
                     
-                    #still a substantial bottle neck, here many values are computed that aren't strictly needed, is it possible to evaluate the crosscorrelation for specific lags? 
+                    #still a substantial bottle neck, here many values are computed that aren't strictly needed
                     a_c = block.gen(0., omega)
                     a_c /= linalg.norm(a_c)
 

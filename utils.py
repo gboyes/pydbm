@@ -86,7 +86,7 @@ class Utils(object):
         return np.max(np.abs(x)) / np.sqrt(np.sum(x**2)/float(len(x)))
 
     def adaptiveMarkers(self, x, hop, min_spacing, max_spacing, mode='diff'):
-        '''Adaptively set determine time-domain markers for a signal, where
+        '''Adaptively determine time-domain markers for a signal, where
            x := signal
            hop := analysis hop size
            min_spacing := minimum spacing of markers
