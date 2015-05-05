@@ -4,7 +4,7 @@ import pydbm.dictionary
 import numpy as np
 import audiolab
 
-x, fs, p = audiolab.wavread('/Users/grahamboyes/Documents/python/pythonDafx/SOUNDS/harm_fof.wav')
+x, fs, p = audiolab.wavread('../sounds/harm_fof.wav')
 sdif = '/Users/grahamboyes/Documents/Work/project_m/harm_fof_shape.sdif'
 
 list_of_corpora = ['/Users/grahamboyes/Documents/Work/sound_corpora/16k/ModernGrand/AF/ordinario_velshort/chromatic']

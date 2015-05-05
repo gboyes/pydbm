@@ -86,7 +86,7 @@ class Utils(object):
         return np.max(np.abs(x)) / np.sqrt(np.sum(x**2)/float(len(x)))
 
     def adaptiveMarkers(self, x, hop, min_spacing, max_spacing, mode='diff'):
-        '''Adaptively set determine time-domain markers for a signal, where
+        '''Adaptively determine time-domain markers for a signal, where
            x := signal
            hop := analysis hop size
            min_spacing := minimum spacing of markers
@@ -364,7 +364,7 @@ class Utils(object):
 
     def dwvd(self, x, hop, fftsize):
         '''Discrete Wigner-Ville distribution
-           x := signal (anaytical for best results)
+           x := signal (analytic for best results)
            hop := time-domain sampling factor
            fftsize := the number of spectral samples (note that the frequency of the kth bin is (0.5 * (k/fftsize) *  fs)''' 
 

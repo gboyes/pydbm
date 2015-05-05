@@ -25,7 +25,7 @@ import scipy.fftpack as fftpack
 import scipy.linalg as linalg
 import numpy.lib.recfunctions as rfn
 
-import scikits.audiolab
+import scikits.audiolab as audiolab
 import pysdif
 
 import pydbm.atom
@@ -48,6 +48,11 @@ class Types(object):
         #these are `input' types obtained by reading SDIFs
         self.sdifTypes = {'1TRC' : [('time', float), ('index', int), ('frequency', float), ('amplitude', float), ('phase', float)],
                              'XTRD' : [('time', float), ('val1', float), ('val2', float)],
+                             '1CTR' : [('time', float), ('mxsa', float), ('mntd', float), ('mxps', float), ('mxvs', float)],
+                             'mxsa' : [('time', float), ('max_simultaneous_atoms', float)],
+                             'mntd' : [('time', float), ('min_time_distance', float)],
+                             'mxps' : [('time', float), ('max_pitch_slope', float)],
+                             'mxvs' : [('time', float), ('max_velocity_slope', float)],
                              'XASD' : [('time', float), ('val1', float), ('val2', float)],
                              'XSGR' : [('time', float), ('onset', int), ('corpus_index', int), ('file_index', int), ('norm', float)],
                              'XSLM' : [('time', float), ('index', int), ('onset', int), ('duration', int), ('corpus_index', int), ('file_index', int), ('norm', float), ('midicents', int), ('velocity', int), ('mag', float)],
@@ -122,16 +127,16 @@ class IO(Types):
 
         Types.__init__(self)
         
-        self.informats = {'.wav' : scikits.audiolab.wavread,
-                   '.aiff' : scikits.audiolab.aiffread, '.aif' : scikits.audiolab.aiffread,
-                   '.au' : scikits.audiolab.auread}
+        self.informats = {'.wav' : audiolab.wavread,
+                   '.aiff' : audiolab.aiffread, '.aif' : audiolab.aiffread,
+                   '.au' : audiolab.auread}
 
-        self.outformats = {'.wav' : scikits.audiolab.wavwrite,
-                   '.aiff' : scikits.audiolab.aiffwrite, '.aif' : scikits.audiolab.aiffwrite,
-                   '.au' : scikits.audiolab.auwrite}
+        self.outformats = {'.wav' : audiolab.wavwrite,
+                   '.aiff' : audiolab.aiffwrite, '.aif' : audiolab.aiffwrite,
+                   '.au' : audiolab.auwrite}
 
     def readAudio(self, path):
-        '''General wrapper for scikits.audiolab read functions
+        '''General wrapper for audiolab read functions
            path := path to file'''
 
         f = os.path.splitext(path)
@@ -140,7 +145,7 @@ class IO(Types):
         return a[0], a[1] 
 
     def writeAudio(self, x, path, fs, format='.aiff'):
-        '''General wrapper for scikits.audiolab write functions
+        '''General wrapper for audiolab write functions
            x := signal
            path := path to new file
            fs := sample rate
@@ -151,7 +156,7 @@ class IO(Types):
     def sdif2array(self, sdif_in, type_string_list):
         '''Make an SDIF file into a python dictionary of ndarrays separated by matrix type
            sdif_in := SDIF file to read
-           type_string_list := SDIF matrix types to be extracted (these need to be defined in pydbm.data.Type.sdifTypes_in)''' 
+           type_string_list := SDIF matrix types to be extracted (these need to be defined in pydbm.data.Type.sdifTypes)''' 
 
         sdif_file = pysdif.SdifFile(sdif_in)
         data = [[] for k in type_string_list]

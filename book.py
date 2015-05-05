@@ -26,7 +26,6 @@ import scipy.fftpack as fftpack
 import pysdif
 import scikits.audiolab as audiolab
 import numpy.lib.recfunctions as rfn
-import matplotlib.pyplot as plt
 
 import pydbm.meta
 import pydbm.utils
@@ -151,12 +150,6 @@ class Book(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
             a_ *= a['mag']
             w = self.dwvd(sig.hilbert(a_), hop, fftsize)
             W[0:fftsize, np.floor(a['onset'] / float(hop)): np.floor(a['onset'] / float(hop)) + np.shape(w)[1]] += np.abs(w)
-
-        if plot:
-            p = plt.axes()
-            p.imshow(W, interpolation=None, aspect='auto', origin='lower', cmap='Greys', extent=[0., np.shape(W)[1] * float(hop) / self.sampleRate, 0., 0.5 * self.sampleRate])
-            p.set_xlabel('Time (s)')
-            p.set_ylabel("Frequency (Hz)")
 
         return W
 
@@ -403,6 +396,109 @@ class SoundgrainBook(pydbm.meta.Group, pydbm.meta.IO):
                     frame.add_matrix('XSGM', np.array([[N['onset'], N['duration'], N['corpus_index'], N['file_index'], N['norm'], N['mag']]]))
                 else:
                     frame.add_matrix('XSLM', np.array([[N['onset'], N['duration'], N['corpus_index'], N['file_index'], N['norm'], N['midicents'], N['velocity'], N['mag']]]))
+                c += 1
+            frame.write()
+            n += c
+        f.close()
+
+class InstrumentSoundgrainBook(SoundgrainBook):
+
+    def __init__(self, fs, SoundDatabase, maxnum):
+        SoundgrainBook.__init__(self, fs, SoundDatabase, maxnum)
+        dtype = self.atomGenTable['soundgrain'].bookType
+        dtype.append(('velocity', int))
+        dtype.append(('midicent', int))
+        dtype.append(('molecule', int))
+        self.atoms = np.zeros(maxnum, dtype=dtype)
+        self.atoms['type'] = 'soundgrain'
+        
+    def crosscorrelate(self, num, compfunc=lambda x, y: np.sqrt((x['midicent'] - y['midicent'])**2 + (x['onset'] - y['onset'])**2)):
+        '''Agglomerate (a subset of) the synthesis book into molecules, where
+           num := number of atoms to consider
+           outdir := where to write the molecules
+           compfunc := a function to compare atoms, default is Euclidean distance'''
+
+        S = self.atoms.copy()
+        #S.sort(order='mag')
+        #S = S[::-1]
+        S = S[0:num]
+        M = np.zeros((num, num))
+        mx = np.max(S['duration'] + S['onset'])
+
+        for i, a in enumerate(S):
+            
+            for q, b in enumerate(S):
+                
+                M[i, q] = compfunc(a, b)
+
+        return M
+
+    def agglomerate(self, M, thresh):
+        '''Agglomerate a cross-correlation matrix
+           M := cross-correlation matrix
+           thresh := threshold coefficient'''
+        
+        #now the Boolean                                                                                
+        M_ = M > thresh
+
+        for i, row in enumerate(M_):
+            for j, col in enumerate(row):
+                if j < i:
+                    M_[i, j] = 0
+                elif i == j:
+                    M_[i, j] = 1
+
+        #get valid molecule indices
+        a = [np.array([k for k in xrange(np.shape(M_)[1]) if M_[j][k] == 1]) for j in xrange(np.shape(M_)[0])]
+        La = np.array([])
+        Na = []
+        
+        for q in a:
+            q = np.setdiff1d(q, La)
+            La = np.union1d(La, q)
+            if len(q) != 0:
+                Na.append(q)
+
+        return Na
+
+    def annotateMolecules(self, Na):
+        '''Na := list of list of indices'''
+
+        for i, n in enumerate(Na):
+            for j in n:
+                self.atoms[j]['molecule'] = i
+
+    def writeSDIF(self, outpath, labeled=True):
+        '''Generate an sdif from a soundgrain analysis books'''
+        
+        f = pysdif.SdifFile('%s'%outpath, 'w')
+        f.add_NVT({'TableName' : 'FileInfo', 'date' : time.asctime(time.localtime()), 'sample rate' : self.sampleRate})
+
+        uc = np.unique(self.atoms['corpus_index'])
+
+        f.add_NVT(dict([('TableName', 'CorpusDirectories')] + zip([str(k) for k in uc], [C.directory for C in [self.SoundDatabase.corpora[c] for c in uc]])))
+
+        for c in uc:
+            ainds = np.where(self.atoms['corpus_index'] == c)[0]
+            finds = self.atoms['file_index'][ainds]
+            f.add_NVT(dict([('TableName', 'Corpus-%i'%c)] + zip([str(k) for k in finds], [self.SoundDatabase.corpora[c].soundfiles[k] for k in finds])))
+
+
+        f.add_frame_type('XADS', 'XSGM NewXSGM, XSLM NewXSLM')
+        self.atoms.sort(order='onset')
+        f.add_matrix_type('XSGM', 'onset, duration, corpus_index, file_index, norm, mag, molecule')
+        f.add_matrix_type('XSLM', 'onset, duration, corpus_index, file_index, norm, midicent, velocity, mag, molecule')
+        n = 0
+        while n < len(self.atoms['onset']):
+            t = self.atoms['onset'][n]
+            frame = f.new_frame('XADS', t /float(self.sampleRate))
+            c = 0
+            for ind in np.where(self.atoms['onset'] == t)[0]:
+                N = self.atoms[ind]
+                if not labeled:
+                    frame.add_matrix('XSGM', np.array([[N['onset'], N['duration'], N['corpus_index'], N['file_index'], N['norm'], N['mag'], N['molecule']]]))
+                else:
+                    frame.add_matrix('XSLM', np.array([[N['onset'], N['duration'], N['corpus_index'], N['file_index'], N['norm'], N['midicent'], N['velocity'], N['mag'], N['molecule']]]))
                 c += 1
             frame.write()
             n += c
