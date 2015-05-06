@@ -1,5 +1,5 @@
 '''pydbm : a python library for dictionary-based methods 
-    Copyright (C) 2011 Graham Boyes
+    Copyright (C) 2011-2015 Graham Boyes
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -157,10 +157,8 @@ class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
         self.atoms = rfn.stack_arrays((self.atoms, d)).data
 
     def addPolygon(self, Poly, dtype, scale, nbins, hop, **kwargs):
-<<<<<<< HEAD
+
         '''Add a set of atoms for a given Polygon instance'''
-=======
->>>>>>> omdev
 
         Poly.getPolyHull(self.sampleRate, hop, nbins)
 
@@ -1129,7 +1127,7 @@ dtype=self.atomGenTable[dtype].dictionaryType)
 
 #Block Dictionaries#
 ####################
-#remove this or add to the functionality to regular dictionary?
+#TODO: remove this or add to the functionality to regular dictionary?
 
 class Block(pydbm.meta.Types):
     '''A high-level object describing a set of atoms with homogenous window parameters and varying time-frequency support defined by onsets and omegas'''
@@ -1625,11 +1623,8 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
                         #up_ind = np.intersect1d(np.where(self.atoms['onset'] >= self.atoms['onset'][indx] - max_scale)[0],
                         #                    np.where(self.atoms['onset'] < self.atoms['onset'][indx] + max_scale)[0])
                         max_mag[up_ind] = 0.
-<<<<<<< HEAD
-=======
 
-                        #fix this to optimize 
->>>>>>> omdev
+                        #TODO: fix this to optimize 
                         #up_ind = up_ind[np.union1d(np.where(abs(self.atoms['onset'] - self.atoms['onset'][magi]) >= mindistance)[0],
                         #                           np.where(self.atoms['onset'] in M.atoms['onset'][0:c_cnt])[0])]
                         break
@@ -1661,9 +1656,7 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
             c_cnt += 1
 
         M.atoms = M.atoms[0:c_cnt]
-        #out /= max(abs(out))
-        #out *= 0.95
-
+        
         return out, signal, M
 
     #FIX THIS
@@ -2062,7 +2055,5 @@ class InstrumentSoundgrainDictionary(SoundgrainDictionary):
             c_cnt += 1
 
         M.atoms = M.atoms[0:c_cnt]
-        #out /= max(abs(out))
-        #out *= 0.95
-
+        
         return out, signal, M

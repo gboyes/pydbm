@@ -1,5 +1,5 @@
 '''pydbm : a python library for dictionary-based methods 
-    Copyright (C) 2011 Graham Boyes
+    Copyright (C) 2011-2015 Graham Boyes
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ import numpy.lib.recfunctions as rfn
 import pydbm.meta
 import pydbm.utils
 
-#idea: deal with statistics of atoms?  Assume a model is a distribution of elements with mean std etc.
+#TODO: deal with statistics of atoms?  Assume a model is a distribution of elements with mean std etc.
 
 class Book(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
     '''Time-Frequency synthesis Book'''

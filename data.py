@@ -1,5 +1,5 @@
 '''pydbm : a python library for dictionary-based methods 
-    Copyright (C) 2011 Graham Boyes
+    Copyright (C) 2011-2015 Graham Boyes
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -147,7 +147,7 @@ class InstrumentSubspace(pydbm.meta.IO, pydbm.meta.Spectral, pydbm.utils.Utils):
 
                 a['amplitude'] *= 1./np.sqrt(np.sum(a['amplitude']**2))
 
-    #TOFIX
+    #TODO: Fix this clustering method
     '''
     def cluster(self, total):
         
