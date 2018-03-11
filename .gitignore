@@ -4,5 +4,6 @@
 __pycache__/
 venv/
 pysdif/
+build/
 _atom.c
 _atom.so
