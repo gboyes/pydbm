@@ -1,4 +1,4 @@
-'''pydbm : a python library for dictionary-based methods 
+''': a python library for dictionary-based methods 
     Copyright (C) 2011-2015 Graham Boyes
 
     This program is free software: you can redistribute it and/or modify
@@ -26,23 +26,22 @@ import scipy.fftpack as fftpack
 import scipy.linalg as linalg
 import scipy.interpolate as interpolate
 import scipy.cluster.vq as vq
-import pysdif
 import numpy.lib.recfunctions as rfn
 
-import pydbm.meta
-import pydbm.atom
-import pydbm.data
-import pydbm.book
-import pydbm.utils
+from . import meta
+from . import atom
+from . import data
+from . import book
+from . import utils
 
 #most basic dictionary#
 #######################
 
-class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
+class Dictionary(meta.Types, meta.Group, utils.Utils):
     '''Time-frequency analysis dictionary'''
 
     def __init__(self, fs):
-        pydbm.meta.Types.__init__(self)
+        meta.Types.__init__(self)
         self.order = 1
         self.sdifType = 'XDIC'
         self.sampleRate = fs
@@ -51,7 +50,7 @@ class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
     def index(self): 
         '''Index the set of atoms'''
 
-        for i in xrange(len(self.atoms)):
+        for i in range(len(self.atoms)):
             self.atoms['index'][i][0] = i
 
     def toBlockDictionary(self):
@@ -77,11 +76,11 @@ class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
                 
         return BD
 
-    #write the dictionary to an SDIF file, this should be made more general
     def writeSDIF(self, outpath):
         '''Generate an SDIF file from the dictionary
            outpath := the path of the sdif to be written'''
         
+        import pysdif
         f = pysdif.SdifFile('%s'%outpath, 'w')
         f.add_NVT({'date' : time.asctime(time.localtime()), 'sample rate' : self.sampleRate})
         f.add_frame_type(self.sdifType, 'XGAB NewXGAB, XFOF NewXFOF, XGMA NewXGMA, XDMP NewXDMP, XSGR NewXSGR')
@@ -192,7 +191,7 @@ class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
 
         c = 0
         for t in tpoints:
-            for k in xrange(1, scale/2):
+            for k in range(1, scale/2):
                 om = k/float(scale)
                 d[c]['onset'] = t
                 d[c]['omega'] = om
@@ -283,7 +282,7 @@ class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
         threshs = np.array([threshd[key] for key in k]) 
 
         c = 0
-        while (c < maxit) and (any([abs(plist[p][0] - plist[p][1]) > threshs[p] for p in xrange(len(plist))])):
+        while (c < maxit) and (any([abs(plist[p][0] - plist[p][1]) > threshs[p] for p in range(len(plist))])):
 
             #sample the range
             alist = dict(zip(k, [np.unique(np.linspace(min(p), max(p), num=vecsize, endpoint=True).astype(type(min(p)))) for p in plist]))
@@ -313,11 +312,11 @@ class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
             
         
             plist = [np.array([alist.values()[p][coor[p]-upwidth] if coor[p]-upwidth >= 0 else alist.values()[p][0], 
-                     alist.values()[p][coor[p]+upwidth] if coor[p]+upwidth < len(alist.values()[p]) else alist.values()[p][len(alist.values()[p])-1]]) for p in xrange(len(coor))]  
+                     alist.values()[p][coor[p]+upwidth] if coor[p]+upwidth < len(alist.values()[p]) else alist.values()[p][len(alist.values()[p])-1]]) for p in range(len(coor))]  
         
             c +=1
  
-        return dict(zip(k, [alist.values()[p][coor[p]] for p in xrange(len(coor))]))
+        return dict(zip(k, [alist.values()[p][coor[p]] for p in range(len(coor))]))
     
     def mp(self, signal, cmax, srr_thresh):
         '''Matching pursuit using the set of atoms in the Dictionary, where
@@ -329,7 +328,7 @@ class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
         dtype = self.atoms.dtype.descr
         dtype.append(('mag', float))
         dtype.append(('phase', float))        
-        B = pydbm.book.Book(cmax, dtype, self.sampleRate)
+        B = book.Book(cmax, dtype, self.sampleRate)
 
         #place to put model
         out = np.zeros(len(signal), dtype=float)
@@ -345,12 +344,7 @@ class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
         c_cnt = 0
 
         while (c_cnt < cmax) and (srr <= srr_thresh):
-
-            print(c_cnt)
-
             for cnt in up_ind:
-
-                #protip: the first number is phase ;)
                 atom1 = self.atomGenTable[self.atoms['type'][cnt]].gen(0., *[self.atoms[cnt][arg] for arg in self.atomGenTable[self.atoms['type'][cnt]].genargs])
                 atom2 = self.atomGenTable[self.atoms['type'][cnt]].gen(np.pi/2, *[self.atoms[cnt][arg] for arg in self.atomGenTable[self.atoms['type'][cnt]].genargs])
                     
@@ -387,10 +381,6 @@ class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
                 B.atoms[param][c_cnt] = self.atoms[indx][param]
 
             srr = 10 * np.log10( linalg.norm(out)**2 / linalg.norm(signal)**2 ) 
-            print(mag**2 / start_norm**2)
-            print(linalg.norm(signal)**2 / start_norm**2)
-            print(srr)
- 
             #indices to update
             up_ind = np.union1d(np.intersect1d(np.where(self.atoms['onset'] + self.atoms['duration'] < self.atoms[indx]['onset'] + self.atoms[indx]['duration'])[0], 
                                     np.where(self.atoms['onset'] + self.atoms['duration'] >= self.atoms[indx]['onset'])[0]),
@@ -417,7 +407,7 @@ class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
         dtype.append(('phase', float))
         #dtype.append(('norm', float))
         
-        B = pydbm.book.Book(cmax, dtype, self.sampleRate)
+        B = book.Book(cmax, dtype, self.sampleRate)
 
         #place to put model
         out = np.zeros(len(signal), dtype=float)
@@ -433,9 +423,6 @@ class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
         c_cnt = 0
 
         while (c_cnt < cmax) and (srr <= srr_thresh):
-
-            print(c_cnt)
-
             for cnt in up_ind:
 
                 atom1 = self.atomGenTable[self.atoms['type'][cnt]].gen(0., *[self.atoms[cnt][arg] for arg in self.atomGenTable[self.atoms['type'][cnt]].genargs])
@@ -485,10 +472,6 @@ class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
                 B.atoms[param][c_cnt] = dnow[param] 
 
             srr = 10 * np.log10(linalg.norm(out)**2 / linalg.norm(signal)**2) 
-            print(mag**2 / start_norm**2)
-            print(linalg.norm(signal)**2 / start_norm**2)
-            print(srr)
-
             #indices to update
             up_ind = np.union1d(np.intersect1d(np.where(self.atoms['onset'] + self.atoms['duration'] < dnow['onset'] + dnow['duration'])[0], 
                                     np.where(self.atoms['onset'] + self.atoms['duration'] >= dnow['onset'])[0]),
@@ -510,10 +493,10 @@ class Dictionary(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
 #Spectral Dictionary#
 #####################
 
-class SpecDictionary(Dictionary, pydbm.meta.Spectral, pydbm.utils.Utils):
+class SpecDictionary(Dictionary, meta.Spectral, utils.Utils):
 
     def __init__(self, fs):
-        pydbm.meta.Spectral.__init__(self)
+        meta.Spectral.__init__(self)
         self.order = 2
         self.sdifType = 'XSDI'
         self.sampleRate = fs
@@ -554,7 +537,7 @@ class SpecDictionary(Dictionary, pydbm.meta.Spectral, pydbm.utils.Utils):
         dtype.append(('mag', float))
         dtype.append(('phase', float))
 
-        book = pydbm.book.SpectralBook(cmax * maxPeaks, dtype, self.sampleRate)
+        B = book.SpectralBook(cmax * maxPeaks, dtype, self.sampleRate)
 
         out = np.zeros(len(signal))
 
@@ -572,9 +555,6 @@ class SpecDictionary(Dictionary, pydbm.meta.Spectral, pydbm.utils.Utils):
         tol = tolmidicents / float(100)
 
         while (c_cnt < cmax) and (srr <= srr_thresh) and (abs(last_srr - srr) > 0):
-
-            print(c_cnt)
-
             for cnt in up_ind:
 
                 w = self.atomGenTable[self.atoms['type'][cnt]].winargs
@@ -707,17 +687,17 @@ class SpecDictionary(Dictionary, pydbm.meta.Spectral, pydbm.utils.Utils):
                 a1 = self.atomGenTable[dnow['type']].gen(phi, *[dnow[arg] for arg in self.atomGenTable[dnow['type']].genargs])
                 a1 /= linalg.norm(a1)
 
-                book.atoms[t_cnt]['type'] = dnow['type']
-                book.atoms[t_cnt]['onset'] = dnow['onset']
-                book.atoms[t_cnt]['duration'] = dnow['duration']
-                book.atoms[t_cnt]['omega'] = dnow['omega']
-                book.atoms[t_cnt]['mag'] = mag
-                book.atoms[t_cnt]['phase'] = phi
-                book.atoms[t_cnt]['index'][0] = c_cnt #structure
-                book.atoms[t_cnt]['index'][1] = ii #component
+                B.atoms[t_cnt]['type'] = dnow['type']
+                B.atoms[t_cnt]['onset'] = dnow['onset']
+                B.atoms[t_cnt]['duration'] = dnow['duration']
+                B.atoms[t_cnt]['omega'] = dnow['omega']
+                B.atoms[t_cnt]['mag'] = mag
+                B.atoms[t_cnt]['phase'] = phi
+                B.atoms[t_cnt]['index'][0] = c_cnt #structure
+                B.atoms[t_cnt]['index'][1] = ii #component
 
                 for key in winargs.keys():
-                    book.atoms[t_cnt][key] = dnow[key]
+                    B.atoms[t_cnt][key] = dnow[key]
 
                 t_cnt += 1
 
@@ -727,9 +707,6 @@ class SpecDictionary(Dictionary, pydbm.meta.Spectral, pydbm.utils.Utils):
 
             last_srr = srr
             srr = 10 * np.log10( linalg.norm(out)**2 / linalg.norm(signal)**2 ) 
-            print(linalg.norm(signal)**2 / start_norm**2)
-            print(srr)
- 
             #indices to update
             up_ind = np.union1d(np.intersect1d(np.where(self.atoms['onset'] + self.atoms['duration'] < dnow['onset'] + dnow['duration'])[0], 
                                     np.where(self.atoms['onset'] + self.atoms['duration'] >= dnow['onset'])[0]),
@@ -740,13 +717,13 @@ class SpecDictionary(Dictionary, pydbm.meta.Spectral, pydbm.utils.Utils):
 
             c_cnt += 1
 
-        book.atoms = book.atoms[0:t_cnt]
-        book.model = np.array(out)
-        book.residual = np.array(signal)
-        book.resPercent =  (linalg.norm(book.residual)**2 / start_norm**2) * 100
-        book.srr = srr
+        B.atoms = B.atoms[0:t_cnt]
+        B.model = np.array(out)
+        B.residual = np.array(signal)
+        B.resPercent =  (linalg.norm(B.residual)**2 / start_norm**2) * 100
+        B.srr = srr
 
-        return out, signal, book
+        return out, signal, B
 
     def mp2(self, signal, cmax, srr_thresh, tolmidicents, maxPeaks, dBthresh, overspec):
 
@@ -754,8 +731,8 @@ class SpecDictionary(Dictionary, pydbm.meta.Spectral, pydbm.utils.Utils):
         dtype = self.atoms.dtype.descr
         dtype.append(('mag', float))
         dtype.append(('phase', float))
-        book = pydbm.book.SpectralBook(cmax * maxPeaks, dtype, self.sampleRate)
-        Out = np.zeros(len(signal))
+        B = book.SpectralBook(cmax * maxPeaks, dtype, self.sampleRate)
+        out = np.zeros(len(signal))
 
         #place to hold analysis values
         max_mag = np.zeros(self.num())
@@ -771,7 +748,6 @@ class SpecDictionary(Dictionary, pydbm.meta.Spectral, pydbm.utils.Utils):
         tol = tolmidicents / float(100)
 
         while (c_cnt < cmax) and (srr <= srr_thresh) and (abs(last_srr - srr) > 0):
-            print(c_cnt)
             for cnt in up_ind:
                 w = self.atomGenTable[self.atoms['type'][cnt]].winargs
                 if w:
@@ -887,12 +863,12 @@ class SpecDictionary(Dictionary, pydbm.meta.Spectral, pydbm.utils.Utils):
                 a2 *= (1./linalg.norm(a2))
                 pmag[:, ii] = a1 
                 pphase[:, ii] = a2 
-                book.atoms[t_cnt]['omega'] = dnow['omega']
-                book.atoms[t_cnt]['type'] = dnow['type']
-                book.atoms[t_cnt]['onset'] = dnow['onset']
-                book.atoms[t_cnt]['duration'] = dnow['duration']
-                book.atoms[t_cnt]['index'][1] = ii #component
-                book.atoms[t_cnt]['index'][0] = c_cnt
+                B.atoms[t_cnt]['omega'] = dnow['omega']
+                B.atoms[t_cnt]['type'] = dnow['type']
+                B.atoms[t_cnt]['onset'] = dnow['onset']
+                B.atoms[t_cnt]['duration'] = dnow['duration']
+                B.atoms[t_cnt]['index'][1] = ii #component
+                B.atoms[t_cnt]['index'][0] = c_cnt
                 t_cnt += 1
                 
             lsq_m = linalg.lstsq(pmag, xnow)[0] 
@@ -905,17 +881,14 @@ class SpecDictionary(Dictionary, pydbm.meta.Spectral, pydbm.utils.Utils):
             signal[dnow['onset'] : dnow['onset'] + dnow['duration']] -= atom
             out[dnow['onset'] : dnow['onset'] + dnow['duration']] += atom
 
-            book.atoms[t_cnt-len(inds):t_cnt]['mag'] = mags
-            book.atoms[t_cnt-len(inds):t_cnt]['phase'] = phi
+            B.atoms[t_cnt-len(inds):t_cnt]['mag'] = mags
+            B.atoms[t_cnt-len(inds):t_cnt]['phase'] = phi
             
             for key in winargs.keys():
-                book.atoms[t_cnt-len(inds):t_cnt][key] = dnow[key]
+                B.atoms[t_cnt-len(inds):t_cnt][key] = dnow[key]
             
             last_srr = srr
             srr = 10 * np.log10( linalg.norm(out)**2 / linalg.norm(signal)**2 ) 
-            print(linalg.norm(signal)**2 / start_norm**2)
-            print(srr)
- 
             #indices to update
             up_ind = np.union1d(np.intersect1d(np.where(self.atoms['onset'] + self.atoms['duration'] < dnow['onset'] + dnow['duration'])[0], 
                                     np.where(self.atoms['onset'] + self.atoms['duration'] >= dnow['onset'])[0]),
@@ -926,19 +899,19 @@ class SpecDictionary(Dictionary, pydbm.meta.Spectral, pydbm.utils.Utils):
 
             c_cnt += 1
 
-        book.atoms = book.atoms[0:t_cnt]
-        book.model = np.array(out)
-        book.residual = np.array(signal)
-        book.resPercent =  (linalg.norm(book.residual)**2 / start_norm**2) * 100
-        book.srr = srr
+        B.atoms = B.atoms[0:t_cnt]
+        B.model = np.array(out)
+        B.residual = np.array(signal)
+        B.resPercent =  (linalg.norm(B.residual)**2 / start_norm**2) * 100
+        B.srr = srr
 
-        return out, signal, book
+        return out, signal, B
 
     
 #Instrument-Specific Dictionaries#
 ##################################
 #TOFIX or TOREMOVE
-class InstrumentDictionary(pydbm.data.InstrumentSubspace, Dictionary):
+class InstrumentDictionary(data.InstrumentSubspace, Dictionary):
 
     '''Class to build a dictionary of instrument-specific atoms with pursuits that consider these structures'''
 
@@ -952,7 +925,7 @@ class InstrumentDictionary(pydbm.data.InstrumentSubspace, Dictionary):
     def addPitch(self, pitchcents, dtype, scale, timearray, **kwargs):
         '''Add a set of sturctured harmonic atoms for a given pitch'''        
 
-        M = np.array([self.midi2hz(k /100.) / float(self.sampleRate) for k in xrange(pitchcents-tolcents, pitchcents+tolcents, centssampling)])
+        M = np.array([self.midi2hz(k /100.) / float(self.sampleRate) for k in range(pitchcents-tolcents, pitchcents+tolcents, centssampling)])
         A = np.zeros(len(M) * len(timearray) * sum([len(p) for p in self.partialAmplitudes[pitchcents] if len(p) >= mincomponents and len(p) <= maxcomponents]), 
 dtype=self.atomGenTable[dtype].dictionaryType)
         
@@ -1009,7 +982,7 @@ dtype=self.atomGenTable[dtype].dictionaryType)
         dtype.append(('phase', float))
         dtype.append(('norm', float))
         
-        B = pydbm.book.Book(cmax * np.max(self.atoms['index'][0]) + 1, dtype, self.sampleRate)
+        B = book.Book(cmax * np.max(self.atoms['index'][0]) + 1, dtype, self.sampleRate)
 
         #place to put model
         out = np.zeros(len(signal))
@@ -1027,11 +1000,7 @@ dtype=self.atomGenTable[dtype].dictionaryType)
         t_cnt = 0
 
         while (c_cnt < cmax) and (srr <= srr_thresh):
-
-            print(c_cnt)
-
             for cnt in up_ind:
-                
                 di = f0i[cnt]
 
                 compi = np.intersect1d( np.where(self.atoms['source'] == self.atoms[di]['source'])[0], np.where(self.atoms['index'][1] == self.atoms[di]['index'][1])[0]) 
@@ -1073,8 +1042,6 @@ dtype=self.atomGenTable[dtype].dictionaryType)
             atom = np.zeros(self.atoms[di]['duration'])
 
             for cindi, cind in enumerate(compi):
-
-                #build the atom
                 a = self.atomGenTable[self.atoms[cind]['type']].gen(self.atoms[cind]['k_phase'] + phase, *[self.atoms[cind][arg] for arg in self.atomGenTable[self.atoms[cind]['type']].genargs])
                 norman = linalg.norm(a)
                 a /= norman
@@ -1099,15 +1066,10 @@ dtype=self.atomGenTable[dtype].dictionaryType)
             
                 t_cnt += 1
 
-
             signal[self.atoms[di]['onset'] : self.atoms[di]['onset'] + self.atoms[di]['duration']] -= atom * mag 
             out[self.atoms[di]['onset'] : self.atoms[di]['onset'] + self.atoms[di]['duration']] += atom * mag
 
             srr = 10 * np.log10(linalg.norm(out)**2 / linalg.norm(signal)**2) 
-            print(mag**2 / start_norm**2)
-            print(linalg.norm(signal)**2 / start_norm**2)
-            print(srr)
-
             #indices to update
             up_ind = np.union1d(np.intersect1d(np.where(self.atoms['onset'][f0i] + self.atoms['duration'][f0i] < self.atoms[di]['onset'] + self.atoms[di]['duration'])[0], np.where(self.atoms['onset'][f0i] + self.atoms['duration'][f0i] >= self.atoms[di]['onset'])[0]),
                                 np.intersect1d(np.where(self.atoms['onset'][f0i] < self.atoms[di]['onset'] + self.atoms[di]['duration'])[0], 
@@ -1129,11 +1091,11 @@ dtype=self.atomGenTable[dtype].dictionaryType)
 ####################
 #TODO: remove this or add to the functionality to regular dictionary?
 
-class Block(pydbm.meta.Types):
+class Block(meta.Types):
     '''A high-level object describing a set of atoms with homogenous window parameters and varying time-frequency support defined by onsets and omegas'''
  
     def __init__(self, dtype, scale, chirp, omegas, onsets, **winargs):
-        pydbm.meta.Types.__init__(self)
+        meta.Types.__init__(self)
 
         self.dtype = dtype
         self.scale = scale
@@ -1154,12 +1116,12 @@ class Block(pydbm.meta.Types):
         self.genargs = [winargs[key] for key in [k for k in self.AtomGen.genargs if k not in ['duration', 'omega', 'chirp']]]
         self.gen = lambda phi, omega : self.AtomGen.gen(phi, self.scale, omega, chirp, *self.genargs)
 
-class BlockDictionary(pydbm.meta.Types, pydbm.utils.Utils):
+class BlockDictionary(meta.Types, utils.Utils):
 
     '''a 'higher-level' setting of a dictionary ''' 
 
     def __init__(self, fs):
-        pydbm.meta.Types.__init__(self)
+        meta.Types.__init__(self)
         self.sampleRate = fs
         self.blocks = []
         self.dtype = []
@@ -1229,7 +1191,7 @@ class BlockDictionary(pydbm.meta.Types, pydbm.utils.Utils):
         #dtype.append(('norm', float))
         
         #the synthesis book
-        book = pydbm.book.Book(cmax, dtype, self.sampleRate)
+        B = book.Book(cmax, dtype, self.sampleRate)
         
         #place to put model
         out = np.zeros(len(signal), dtype=float)
@@ -1245,8 +1207,6 @@ class BlockDictionary(pydbm.meta.Types, pydbm.utils.Utils):
         c_cnt = 0
 
         while (c_cnt < cmax) and (srr <= srr_thresh):
-            print(c_cnt)
-            
             #different blocks could be computed in parallel as well, taking the best one at each stage
             for ib, block in enumerate(self.blocks):
                 
@@ -1286,24 +1246,20 @@ class BlockDictionary(pydbm.meta.Types, pydbm.utils.Utils):
             out[self.blocks[nb].onsets[nind[1]] : self.blocks[nb].onsets[nind[1]] + self.blocks[nb].scale] += atom  * nmag
 
             #parameters common to all time-frequency atoms
-            book.atoms[c_cnt]['type'] = self.blocks[nb].dtype
-            book.atoms[c_cnt]['duration'] = self.blocks[nb].scale
-            book.atoms[c_cnt]['onset'] = self.blocks[nb].onsets[nind[1]]
-            book.atoms[c_cnt]['omega'] = self.blocks[nb].omegas[nind[0]]
-            book.atoms[c_cnt]['chirp'] = self.blocks[nb].chirp
-            book.atoms[c_cnt]['mag'] = nmag
-            book.atoms[c_cnt]['phase'] = nphase
+            B.atoms[c_cnt]['type'] = self.blocks[nb].dtype
+            B.atoms[c_cnt]['duration'] = self.blocks[nb].scale
+            B.atoms[c_cnt]['onset'] = self.blocks[nb].onsets[nind[1]]
+            B.atoms[c_cnt]['omega'] = self.blocks[nb].omegas[nind[0]]
+            B.atoms[c_cnt]['chirp'] = self.blocks[nb].chirp
+            B.atoms[c_cnt]['mag'] = nmag
+            B.atoms[c_cnt]['phase'] = nphase
 
             #additional window arguments
             for key in self.blocks[nb].winargs:
-                book.atoms[c_cnt][key] = self.blocks[nb].winargs[key] 
+                B.atoms[c_cnt][key] = self.blocks[nb].winargs[key] 
 
             #compute the model-residual ratio and other stats
             srr = 10 * np.log10( linalg.norm(out)**2 / linalg.norm(signal)**2 ) 
-            print(nmag**2 / start_norm**2)
-            print(linalg.norm(signal)**2 / start_norm**2)
-            print(srr)  
-            
             #fix the update interval
             for ui, u in enumerate(up_inds):
                 up_inds[ui] = np.union1d(np.intersect1d(np.where(self.blocks[ui].onsets + self.blocks[ui].scale < self.blocks[nb].onsets[nind[1]] + self.blocks[nb].scale)[0], 
@@ -1311,32 +1267,30 @@ class BlockDictionary(pydbm.meta.Types, pydbm.utils.Utils):
                                 np.intersect1d(np.where(self.blocks[ui].onsets < self.blocks[nb].onsets[nind[1]] + self.blocks[nb].scale)[0], 
                                     np.where(self.blocks[ui].onsets  >= self.blocks[nb].onsets[nind[1]])[0]))
                 mags[ui][0:, up_inds[ui]] = 0.
- 
-
             c_cnt += 1
 
         #add the stats to the book object
-        book.atoms = book.atoms[0:c_cnt]
-        book.model = np.array(out)
-        book.residual = np.array(signal)
-        book.resPercent =  (linalg.norm(book.residual)**2 / start_norm**2) * 100
-        book.srr = srr
+        B.atoms = B.atoms[0:c_cnt]
+        B.model = np.array(out)
+        B.residual = np.array(signal)
+        B.resPercent =  (linalg.norm(B.residual)**2 / start_norm**2) * 100
+        B.srr = srr
 
-        return out, signal, book
+        return out, signal, B
         
-class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
+class SoundgrainDictionary(meta.Group, meta.IO, utils.Utils):
 
     '''Dictionary for corpus-based synthesis'''
 
     def __init__(self, fs, SoundDatabase):
-        pydbm.meta.IO.__init__(self)
+        meta.IO.__init__(self)
 
         self.sampleRate = fs
         self.SoundDatabase = SoundDatabase
         self.atoms = np.array([], dtype=[('index', 'i4', (1, ))])
 
     def count(self):
-        for i in xrange(self.num()):
+        for i in range(self.num()):
             self.atoms['index'][i] = i
 
     #a pruning method based on a polygon
@@ -1345,7 +1299,7 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
         Poly.getPolyHull(self.sampleRate, hop, nbins)
         cg = 0.49951171875
         onset = min(Poly.polyHull['hop']) * hop
-        dtype = pydbm.atom.SoundgrainGen().dictionaryType
+        dtype = atom.SoundgrainGen().dictionaryType
 
         X = self.stft(signal, win, nbins, hop, w='hann')
         R = X[Poly.polyHull['bin'], Poly.polyHull['hop']]
@@ -1400,14 +1354,14 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
         '''add a Corpus to the dictonary at specific onsets'''
 
         N = np.array(onsets)
-        dtype = pydbm.atom.SoundgrainGen().dictionaryType
+        dtype = atom.SoundgrainGen().dictionaryType
         da = np.zeros(self.SoundDatabase.corpora[corpus_index].num() * len(N), dtype)
         da['type'] = 'soundgrain'
 
         p = 0
         for n in N:
 
-            for i in xrange(self.SoundDatabase.corpora[corpus_index].num()):
+            for i in range(self.SoundDatabase.corpora[corpus_index].num()):
 
                 da['corpus_index'][p] = corpus_index
                 da['file_index'][p] = self.SoundDatabase.corpora[corpus_index].fileDescriptors['file_index'][i]
@@ -1427,7 +1381,7 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
         dtype.append(('mag', float))
 
         #M = np.zeros(cmax, dtype=dtype)
-        M = pydbm.book.SoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
+        M = book.SoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
         
         #place to put model
         out = np.zeros(len(signal), dtype=float)
@@ -1444,9 +1398,6 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
         c_cnt = 0
 
         while (c_cnt < cmax) and (srr <= srr_thresh):
-
-            print(c_cnt)
-
             for cnt in up_ind:
                 
                 atom = self.readAudio(self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].directory + '/' + self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].soundfiles[self.atoms['file_index'][cnt]])[0]  
@@ -1474,10 +1425,6 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
 
             #Measure the change    
             srr = 10 * np.log10(linalg.norm(out)**2 / linalg.norm(signal)**2) 
-            print(a**2 / start_norm**2)
-            print(linalg.norm(signal)**2 / start_norm**2)
-            print(srr)            
-
             up_ind = np.intersect1d(np.where(self.atoms['onset'] >= self.atoms['onset'][indx] - max_scale)[0], np.where(self.atoms['onset'] < self.atoms['onset'][indx] + max_scale)[0]) 
             max_mag[up_ind] = 0.
 
@@ -1496,7 +1443,7 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
         dtype.append(('mag', float))
 
         #M = np.zeros(cmax, dtype=dtype)
-        M = pydbm.book.SoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
+        M = book.SoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
         
         #place to put model
         out = np.zeros(len(signal), dtype=float)
@@ -1515,9 +1462,6 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
         start = 1.
 
         while (c_cnt < cmax) and (srr <= srr_thresh):
-
-            print(c_cnt)
-
             for cnt in up_ind:
                 
                 atom = self.readAudio(self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].directory + '/' + self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].soundfiles[self.atoms['file_index'][cnt]])[0]  
@@ -1538,9 +1482,6 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
                 print('No admissible atoms')
                 break
             
-            #indx = np.argmax(max_mag)
-            print(indx)
-
             a = max_mag[indx]
             atom = self.readAudio(self.SoundDatabase.corpora[self.atoms['corpus_index'][indx]].directory + '/' + self.SoundDatabase.corpora[self.atoms['corpus_index'][indx]].soundfiles[self.atoms['file_index'][indx]])[0]  
 
@@ -1564,9 +1505,6 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
                 print(perc)
                 break
             start = perc
-  
-            print(linalg.norm(signal)**2 / start_norm**2)
-            print(srr)            
 
             up_ind = np.intersect1d(np.where(self.atoms['onset'] >= self.atoms['onset'][indx] - max_scale)[0], np.where(self.atoms['onset'] < self.atoms['onset'][indx] + max_scale)[0]) 
             max_mag[up_ind] = 0.
@@ -1584,7 +1522,7 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
 
         dtype = self.atoms.dtype.descr
         dtype.append(('mag', float))
-        M = pydbm.book.SoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
+        M = book.SoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
         #M.atoms['onset'] = np.inf #set initial onsets to inf so that 0 onset is initially acceptable
         out = np.zeros(len(signal), dtype=float)
         max_mag = np.zeros(len(self.atoms))
@@ -1596,7 +1534,6 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
         c_cnt = 0
 
         while (c_cnt < cmax) and (srr <= srr_thresh):
-            print(c_cnt)
             for cnt in up_ind:
                 atom = self.readAudio(self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].directory + '/' + self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].soundfiles[self.atoms['file_index'][cnt]])[0]  
                 a = np.inner(atom, signal[self.atoms['onset'][cnt]:self.atoms['onset'][cnt]+self.atoms['duration'][cnt]]) / self.atoms['norm'][cnt]
@@ -1649,17 +1586,13 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
 
             #Measure the change    
             srr = 10 * np.log10(linalg.norm(out)**2 / linalg.norm(signal)**2) 
-            print(a**2 / start_norm**2)
-            print(linalg.norm(signal)**2 / start_norm**2)
-            print(srr)
-            
             c_cnt += 1
 
         M.atoms = M.atoms[0:c_cnt]
         
         return out, signal, M
 
-    #FIX THIS
+    #FIXME
     def mp_stereo(self, signal, cmax, srr_thresh):
         '''Matching Pursuit for stereo sound grains'''
 
@@ -1668,7 +1601,7 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
         dtype.append(('mag', '2float'))
 
         #M = np.zeros(cmax, dtype=dtype)
-        M = pydbm.book.SoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
+        M = book.SoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
         
         #place to put model
         out = np.zeros(len(signal), dtype=float)
@@ -1717,10 +1650,6 @@ class SoundgrainDictionary(pydbm.meta.Group, pydbm.meta.IO, pydbm.utils.Utils):
 
             #Measure the change    
             srr = 10 * np.log10(linalg.norm(out)**2 / linalg.norm(signal)**2) 
-            print(a**2 / start_norm**2)
-            print(linalg.norm(signal)**2 / start_norm**2)
-            print(srr)            
-
             up_ind = np.intersect1d(np.where(self.atoms['onset'] >= self.atoms['onset'][indx] - max_scale)[0], np.where(self.atoms['onset'] < self.atoms['onset'][indx] + max_scale)[0]) 
             max_mag[up_ind] = 0.
 
@@ -1742,7 +1671,7 @@ class InstrumentSoundgrainDictionary(SoundgrainDictionary):
         '''add a Corpus to the dictonary at specific onsets'''
 
         N = np.array(onsets)
-        dtype = pydbm.atom.SoundgrainGen().dictionaryType
+        dtype = atom.SoundgrainGen().dictionaryType
         dtype.append(('velocity', int))
         dtype.append(('midicent', int))
         
@@ -1752,7 +1681,7 @@ class InstrumentSoundgrainDictionary(SoundgrainDictionary):
         p = 0
         for n in N:
 
-            for i in xrange(self.SoundDatabase.corpora[corpus_index].num()):
+            for i in range(self.SoundDatabase.corpora[corpus_index].num()):
 
                 da['corpus_index'][p] = corpus_index
                 da['file_index'][p] = self.SoundDatabase.corpora[corpus_index].fileDescriptors['file_index'][i]
@@ -1769,7 +1698,7 @@ class InstrumentSoundgrainDictionary(SoundgrainDictionary):
 
     def mpc(self, signal, cmax, srr_thresh, constraint_sdif, tv=False, globscalar=1.0):
 
-        M = pydbm.book.InstrumentSoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
+        M = book.InstrumentSoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
 
         constraints = self.sdif2array(constraint_sdif, ['mxsa', 'mntd', 'mxps', 'mxvs'])
         
@@ -1787,7 +1716,6 @@ class InstrumentSoundgrainDictionary(SoundgrainDictionary):
             last_indxs= []
 
         while (c_cnt < cmax) and (srr <= srr_thresh):
-            print(c_cnt)
             if tv:
                 for cnt in up_ind:
                     atom = self.readAudio(self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].directory + '/' + self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].soundfiles[self.atoms['file_index'][cnt]])[0]  
@@ -1957,10 +1885,6 @@ class InstrumentSoundgrainDictionary(SoundgrainDictionary):
             #Measure the change    
             srr = 10 * np.log10(linalg.norm(out)**2 / linalg.norm(signal)**2) 
             perc = linalg.norm(signal)**2 / start_norm**2
-            print(a**2 / start_norm**2)
-            print(perc)
-            print(srr)
-
             if tv:
                 last_indxs.append(indx)
                 if perc > start:
@@ -1972,16 +1896,13 @@ class InstrumentSoundgrainDictionary(SoundgrainDictionary):
             c_cnt += 1
 
         M.atoms = M.atoms[0:c_cnt]
-        #out /= max(abs(out))
-        #out *= 0.95
-
         return out, signal, M
 
     def mpc_(self, signal, cmax, srr_thresh, maxsimul, mindistance):
 
         dtype = self.atoms.dtype.descr
         dtype.append(('mag', float))
-        M = pydbm.book.InstrumentSoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
+        M = book.InstrumentSoundgrainBook(self.sampleRate, self.SoundDatabase, cmax)
         #M.atoms['onset'] = np.inf #set initial onsets to inf so that 0 onset is initially acceptable
         out = np.zeros(len(signal), dtype=float)
         max_mag = np.zeros(len(self.atoms))
@@ -1993,7 +1914,6 @@ class InstrumentSoundgrainDictionary(SoundgrainDictionary):
         c_cnt = 0
 
         while (c_cnt < cmax) and (srr <= srr_thresh):
-            print(c_cnt)
             for cnt in up_ind:
                 atom = self.readAudio(self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].directory + '/' + self.SoundDatabase.corpora[self.atoms['corpus_index'][cnt]].soundfiles[self.atoms['file_index'][cnt]])[0]  
                 a = np.inner(atom, signal[self.atoms['onset'][cnt]:self.atoms['onset'][cnt]+self.atoms['duration'][cnt]]) / self.atoms['norm'][cnt]
@@ -2048,10 +1968,6 @@ class InstrumentSoundgrainDictionary(SoundgrainDictionary):
 
             #Measure the change    
             srr = 10 * np.log10(linalg.norm(out)**2 / linalg.norm(signal)**2) 
-            print(a**2 / start_norm**2)
-            print(linalg.norm(signal)**2 / start_norm**2)
-            print(srr)
-            
             c_cnt += 1
 
         M.atoms = M.atoms[0:c_cnt]

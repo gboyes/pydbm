@@ -1,0 +1,2 @@
+matplotlib>=2.2.0 
+nose2>=0.7.4

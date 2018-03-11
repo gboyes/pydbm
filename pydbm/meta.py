@@ -22,14 +22,12 @@ import inspect
 
 import numpy as np
 import scipy.fftpack as fftpack
+import scipy.io.wavfile as wavfile
 import scipy.linalg as linalg
 import numpy.lib.recfunctions as rfn
 
-import scikits.audiolab as audiolab
-import pysdif
-
-import pydbm.atom
-import pydbm.utils
+from . import atom
+from . import utils
 
 #Type management#
 #################
@@ -41,7 +39,7 @@ class Types(object):
 
         #automatically get relevant atom generating objects from the atom module and store the instatiated object in a lookup table
         #important to note that they are only instantiated prior to (and not during) the decomposition
-        self.atomGenTable = dict( [(a.type, a) for a in [a_[1]() for a_ in inspect.getmembers(pydbm.atom, inspect.isclass) if 'type' in a_[1]().__dict__.keys()]])
+        self.atomGenTable = dict( [(a.type, a) for a in [a_[1]() for a_ in inspect.getmembers(atom, inspect.isclass) if 'type' in a_[1]().__dict__.keys()]])
         self.atomTypes = self.atomGenTable.keys()
         self.atomGenObjects = self.atomGenTable.values()
 
@@ -94,7 +92,6 @@ class Group(object):
     def num(self):
         return len(self.atoms)
 
-    #a more general way to alter the contents of a Group                                                                                   
     def alter(self, param, function):
         '''Modify a parameter of the dictionary                    
            param := parameter to modify                                                                         
@@ -124,40 +121,34 @@ class IO(Types):
     '''Class for file management.  Functions for reading/writing audio, sdifs are defined here'''
     
     def __init__(self):
-
         Types.__init__(self)
-        
-        self.informats = {'.wav' : audiolab.wavread,
-                   '.aiff' : audiolab.aiffread, '.aif' : audiolab.aiffread,
-                   '.au' : audiolab.auread}
-
-        self.outformats = {'.wav' : audiolab.wavwrite,
-                   '.aiff' : audiolab.aiffwrite, '.aif' : audiolab.aiffwrite,
-                   '.au' : audiolab.auwrite}
+        self.informats = {'.wav' : wavfile.read}
+        self.outformats = {'.wav' : wavfile.write}
 
     def readAudio(self, path):
-        '''General wrapper for audiolab read functions
+        '''General wrapper for audio read functions
            path := path to file'''
 
         f = os.path.splitext(path)
         a = self.informats[f[1].lower()](path)
 
-        return a[0], a[1] 
+        return a[1], a[0] 
 
-    def writeAudio(self, x, path, fs, format='.aiff'):
-        '''General wrapper for audiolab write functions
+    def writeAudio(self, x, path, fs, format='.wav'):
+        '''Wrapper for audio write functions
            x := signal
            path := path to new file
            fs := sample rate
            format := output format'''
 
-        self.outformats[format](x, path+format, fs)
+        self.outformats[format](path+format, fs, x)
 
     def sdif2array(self, sdif_in, type_string_list):
         '''Make an SDIF file into a python dictionary of ndarrays separated by matrix type
            sdif_in := SDIF file to read
            type_string_list := SDIF matrix types to be extracted (these need to be defined in pydbm.data.Type.sdifTypes)''' 
 
+        import pysdif
         sdif_file = pysdif.SdifFile(sdif_in)
         data = [[] for k in type_string_list]
         
@@ -167,16 +158,16 @@ class IO(Types):
                     if matrix.signature == ts:
                         data[ind].append((frame.time, matrix.get_data().copy()))
 
-        num = [sum([len(p[1]) for p in data[k]]) for k in xrange(len(data))] 
-        S = dict(zip((type_string_list[k] for k in xrange(len(data))), (np.zeros(num[k], dtype=self.sdifTypes[type_string_list[k]]) for k in xrange(len(data)))))
+        num = [sum([len(p[1]) for p in data[k]]) for k in range(len(data))] 
+        S = dict(zip((type_string_list[k] for k in range(len(data))), (np.zeros(num[k], dtype=self.sdifTypes[type_string_list[k]]) for k in range(len(data)))))
 
         for indx, d in enumerate(data):
             c = 0
-            for i in xrange(len(d)):
+            for i in range(len(d)):
                 if len(d[i][1]) == 0:
                     continue
                 tim = d[i][0]
-                for q in xrange(len(d[i][1])):
+                for q in range(len(d[i][1])):
                     r = [k for k in d[i][1][q]]
                     r.insert(0, tim)
                     S[type_string_list[indx]][c] = tuple(r)
@@ -262,14 +253,16 @@ class Spectral(Types):
         difference[len(difference)-1] = rmin
         difference = np.diff(difference)
 
-        ilocPP = np.intersect1d(np.where(difference[0:N/2] >= 0)[0], np.where(difference[1:N/2+1] <= 0)[0])
+        N_ = int(np.floor(N/2))
+
+        ilocPP = np.intersect1d(np.where(difference[0:N_] >= 0)[0], np.where(difference[1:N_+1] <= 0)[0])
         ivalPP = magSpectrum[ilocPP]
 
         if len(ivalPP) == 0:
             return [], []
 
         #find locations and values
-        for k in xrange(nPeaks):
+        for k in range(nPeaks):
             point = np.argmax(ivalPP)
 
             #dB
@@ -320,8 +313,6 @@ class Spectral(Types):
 
         iloc = cur_loc + 0.5*(intpLV - intpRV) / (intpLV - 2*intpCV + intpRV)
         iloc = ((iloc >= 0) & (iloc <= N/2)) * iloc
-        #iloc = (iloc >= 0) * iloc #+ (iloc < 0) * 1
-        #iloc = (iloc < N/2) *  (zp/2 + 1 ) + (iloc <= N/2) * iloc
         #remove nans!
         iloc[np.where(iloc != iloc)[0]] = 0.
 
@@ -337,6 +328,3 @@ class Spectral(Types):
         ival = cur_val - .25*(leftval-rightval) * (iloc - cur_loc)
 
         return iloc, ival, iphase
-
-
-

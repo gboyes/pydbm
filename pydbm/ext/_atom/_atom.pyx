@@ -53,7 +53,7 @@ cdef inline double realSinusoidFM(int i, float omega, float chirp, float phi, fl
 ######################################################################################
 @cython.profile(False)
 @cython.boundscheck(False) 
-cpdef np.ndarray[np.float_t, ndim=1, mode="c"] realSinusoid_(int N, float omega, float chirp, float phi):
+cpdef np.ndarray[np.float_t, ndim=1, mode="c"] _realSinusoid(int N, float omega, float chirp, float phi):
     cdef np.ndarray[np.float_t, ndim=1, mode="c"] out = np.cos(2 * pi * (omega + chirp * 0.5 * np.arange(N)) * np.arange(N) + phi)
     return out
 
@@ -61,7 +61,7 @@ cpdef np.ndarray[np.float_t, ndim=1, mode="c"] realSinusoid_(int N, float omega,
 #####################################################################################
 @cython.profile(False)
 @cython.boundscheck(False)
-cpdef np.ndarray[np.float_t, ndim=1, mode="c"] gabor_(float phi, int N, float omega, float chirp):
+cpdef np.ndarray[np.float_t, ndim=1, mode="c"] _gabor(float phi, int N, float omega, float chirp):
     '''A gabor atom where
        phi := initial phase
        N := scale, i.e. length
@@ -79,7 +79,7 @@ cpdef np.ndarray[np.float_t, ndim=1, mode="c"] gabor_(float phi, int N, float om
 #####################################################################################
 @cython.profile(False)
 @cython.boundscheck(False)
-cpdef np.ndarray[np.float_t, ndim=1, mode="c"] gaborFM_(float phi, int N, float omega, float chirp, float omega_m=0., float phi_m=0., float depth=0.):
+cpdef np.ndarray[np.float_t, ndim=1, mode="c"] _gaborFM(float phi, int N, float omega, float chirp, float omega_m=0., float phi_m=0., float depth=0.):
     '''A gabor atom where
        phi := initial phase
        N := scale, i.e. length
@@ -97,7 +97,7 @@ cpdef np.ndarray[np.float_t, ndim=1, mode="c"] gaborFM_(float phi, int N, float 
 #####################################################################################
 @cython.profile(False)
 @cython.boundscheck(False)
-cpdef np.ndarray[np.float_t, ndim=1, mode="c"] hann_(float phi, int N, float omega, float chirp):
+cpdef np.ndarray[np.float_t, ndim=1, mode="c"] _hann(float phi, int N, float omega, float chirp):
     '''A hann atom where
        phi := initial phase
        N := scale, i.e. length
@@ -115,7 +115,7 @@ cpdef np.ndarray[np.float_t, ndim=1, mode="c"] hann_(float phi, int N, float ome
 #####################################################################################
 @cython.profile(False)
 @cython.boundscheck(False)
-cpdef np.ndarray[np.float_t, ndim=1, mode="c"] hannFM_(float phi, int N, float omega, float chirp, float omega_m=0., float phi_m=0., float depth=0.):
+cpdef np.ndarray[np.float_t, ndim=1, mode="c"] _hannFM(float phi, int N, float omega, float chirp, float omega_m=0., float phi_m=0., float depth=0.):
     '''A hann atom where
        phi := initial phase
        N := scale, i.e. length
@@ -133,7 +133,7 @@ cpdef np.ndarray[np.float_t, ndim=1, mode="c"] hannFM_(float phi, int N, float o
 #####################################################################################
 @cython.profile(False)
 @cython.boundscheck(False)
-cpdef np.ndarray[np.float_t, ndim=1, mode="c"] blackman_(float phi, int N, float omega, float chirp):
+cpdef np.ndarray[np.float_t, ndim=1, mode="c"] _blackman(float phi, int N, float omega, float chirp):
     '''A blackman atom where
        phi := initial phase
        N := scale, i.e. length
@@ -151,7 +151,7 @@ cpdef np.ndarray[np.float_t, ndim=1, mode="c"] blackman_(float phi, int N, float
 #####################################################################################
 @cython.profile(False)
 @cython.boundscheck(False)
-cpdef np.ndarray[np.float_t, ndim=1, mode="c"] blackmanFM_(float phi, int N, float omega, float chirp, float omega_m=0., float phi_m=0., float depth=0.):
+cpdef np.ndarray[np.float_t, ndim=1, mode="c"] _blackmanFM(float phi, int N, float omega, float chirp, float omega_m=0., float phi_m=0., float depth=0.):
     '''A blackman FM atom where
        phi := initial phase
        N := scale, i.e. length
@@ -170,7 +170,7 @@ cpdef np.ndarray[np.float_t, ndim=1, mode="c"] blackmanFM_(float phi, int N, flo
 ##################################################################################################################
 @cython.profile(False)
 @cython.boundscheck(False)
-cpdef np.ndarray[np.float_t, ndim=1, mode="c"] gamma_(float phi, int N, float omega, float chirp, float order, float bandwidth):
+cpdef np.ndarray[np.float_t, ndim=1, mode="c"] _gamma(float phi, int N, float omega, float chirp, float order, float bandwidth):
 
     cdef np.ndarray[np.float_t, ndim=1, mode="c"] out = np.zeros(N, dtype=float)
     cdef int i
@@ -184,7 +184,7 @@ cpdef np.ndarray[np.float_t, ndim=1, mode="c"] gamma_(float phi, int N, float om
 ##################################################################################################################
 @cython.profile(False)
 @cython.boundscheck(False)
-cpdef np.ndarray[np.float_t, ndim=1, mode="c"] gammaFM_(float phi, int N, float omega, float chirp, float order, float bandwidth, float omega_m=0., float phi_m=0., float depth=0.):
+cpdef np.ndarray[np.float_t, ndim=1, mode="c"] _gammaFM(float phi, int N, float omega, float chirp, float order, float bandwidth, float omega_m=0., float phi_m=0., float depth=0.):
 
     cdef np.ndarray[np.float_t, ndim=1, mode="c"] out = np.zeros(N, dtype=float)
     cdef int i
@@ -199,7 +199,7 @@ cpdef np.ndarray[np.float_t, ndim=1, mode="c"] gammaFM_(float phi, int N, float 
 ##################################################################################################################
 @cython.profile(False)
 @cython.boundscheck(False)
-cpdef np.ndarray[np.float_t, ndim=1, mode="c"] damped_(float phi, int N, float omega, float chirp, float damp):
+cpdef np.ndarray[np.float_t, ndim=1, mode="c"] _damped(float phi, int N, float omega, float chirp, float damp):
 
     cdef np.ndarray[np.float_t, ndim=1, mode="c"] out = np.zeros(N, dtype=float)
     cdef int i
@@ -213,7 +213,7 @@ cpdef np.ndarray[np.float_t, ndim=1, mode="c"] damped_(float phi, int N, float o
 ##################################################################################################################
 @cython.profile(False)
 @cython.boundscheck(False)
-cpdef np.ndarray[np.float_t, ndim=1, mode="c"] dampedFM_(float phi, int N, float omega, float chirp, float damp, float omega_m=0., float phi_m=0., float depth=0.):
+cpdef np.ndarray[np.float_t, ndim=1, mode="c"] _dampedFM(float phi, int N, float omega, float chirp, float damp, float omega_m=0., float phi_m=0., float depth=0.):
 
     cdef np.ndarray[np.float_t, ndim=1, mode="c"] out = np.zeros(N, dtype=float)
     cdef int i
@@ -229,7 +229,7 @@ cpdef np.ndarray[np.float_t, ndim=1, mode="c"] dampedFM_(float phi, int N, float
 #################################################################################################################
 @cython.profile(False)
 @cython.boundscheck(False)
-cpdef np.ndarray[np.float_t, ndim=1, mode="c"] fof_(float phi, int N, float omega, float chirp, int rise_n, int decay_n):
+cpdef np.ndarray[np.float_t, ndim=1, mode="c"] _fof(float phi, int N, float omega, float chirp, int rise_n, int decay_n):
     
     cdef np.ndarray[np.float_t, ndim=1, mode='c'] out = np.zeros(N, dtype=float)
     cdef int t
@@ -257,7 +257,7 @@ cpdef np.ndarray[np.float_t, ndim=1, mode="c"] fof_(float phi, int N, float omeg
 #################################################################################################################
 @cython.profile(False)
 @cython.boundscheck(False)
-cpdef np.ndarray[np.float_t, ndim=1, mode="c"] fofFM_(float phi, int N, float omega, float chirp, int rise_n, int decay_n, float omega_m=0., float phi_m=0., float depth=0.):
+cpdef np.ndarray[np.float_t, ndim=1, mode="c"] _fofFM(float phi, int N, float omega, float chirp, int rise_n, int decay_n, float omega_m=0., float phi_m=0., float depth=0.):
     
     cdef np.ndarray[np.float_t, ndim=1, mode='c'] out = np.zeros(N, dtype=float)
     cdef int t
@@ -280,11 +280,3 @@ cpdef np.ndarray[np.float_t, ndim=1, mode="c"] fofFM_(float phi, int N, float om
         out[i] = out[i] * realSinusoidFM(i, omega, chirp, phi, omega_m, phi_m, depth)
     
     return out
-    
-    
-
-    
-    
-    
-
- 

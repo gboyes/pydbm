@@ -1,4 +1,4 @@
-'''pydbm : a python library for dictionary-based methods 
+'''pydbm : a python library for dictionary-based methods
     Copyright (C) 2011-2015 Graham Boyes
 
     This program is free software: you can redistribute it and/or modify
@@ -17,10 +17,8 @@
 
 import numpy as np
 import scipy.fftpack as fftpack
-import atom_
+from .ext._atom import _atom
 
-#Atom generators#
-#################
 
 class Window(object):
     '''Abstract base class for window-based atoms'''
@@ -48,6 +46,7 @@ class Window(object):
 
         return N / (2 * N * self.enbw(N, **winargs))
 
+
 class Sinusoid(object):
     '''Base class for sinusoid-type atoms'''
 
@@ -60,27 +59,28 @@ class Sinusoid(object):
     def vibratingSinusoid(self, N, omega, phi, omega_m, phi_m, depth):
         return np.cos(2 * np.pi * omega * np.arange(N) + (depth/omega_m * np.sin(2 * np.pi * omega_m * np.arange(N) + phi_m)) + phi)
 
-setattr(Sinusoid, 'realSinusoid_', atom_.realSinusoid_)
+
+setattr(Sinusoid, '_realSinusoid', _atom._realSinusoid)
 
 class HarmonicSinusoid(Sinusoid):
 
     def realHarmonicSinusoid_parametric(self, N, omega, phi, numPartials, omega_function=lambda f, k: k*f, amp_function=lambda k: np.exp(k), phi_function=lambda phi: phi):
 
         out = np.zeros(N)
-        for i in xrange(1, numPartials+1):
-            out += self.realSinusoid_(N, omega_function(omega, i), phi_function(phi)) * amp_function(i)
+        for i in range(1, numPartials+1):
+            out += self._realSinusoid(N, omega_function(omega, i), phi_function(phi)) * amp_function(i)
         return out
 
     def realHarmonicSinusoid(self, N, amp_list, omega_list, phi_list, maxnum=1000):
-        return sum([amp_list[i] * self.realSinusoid_(N, omega_list[i], phi_list[i]) for i in xrange(min((len(omega_list), maxnum)))])   
+        return sum([amp_list[i] * self._realSinusoid(N, omega_list[i], phi_list[i]) for i in range(min((len(omega_list), maxnum)))])   
 
-setattr(HarmonicSinusoid, 'realSinusoid_', atom_.realSinusoid_)
+setattr(HarmonicSinusoid, '_realSinusoid', _atom._realSinusoid)
 
 
 class HannGen(Window, Sinusoid):
 
     def __init__(self):
-        self.type = 'hann'
+        self.type = b'hann'
         self.dictionarySdifType = 'XHAN'
         self.dictionaryType = [('type', 'S10'), ('onset', int), ('duration', int), ('omega', float), ('chirp', float)]
         self.bookSdifType = 'XHAM'
@@ -92,13 +92,13 @@ class HannGen(Window, Sinusoid):
     def window(self, N):
         return 0.5 * (1 - np.cos( 2*np.pi*np.arange(N) / (N-1)))
 
-setattr(HannGen, 'gen', atom_.hann_)
-setattr(HannGen, 'genFM', atom_.hannFM_)
+setattr(HannGen, 'gen', _atom._hann)
+setattr(HannGen, 'genFM', _atom._hannFM)
 
 class BlackmanGen(Window, Sinusoid):
 
     def __init__(self):
-        self.type = 'blackman'
+        self.type = b'blackman'
         self.dictionarySdifType = 'XBLK'
         self.dictionaryType = [('type', 'S10'), ('onset', int), ('duration', int), ('omega', float), ('chirp', float)]
         self.bookSdifType = 'XBLM'
@@ -110,13 +110,13 @@ class BlackmanGen(Window, Sinusoid):
     def window(self, N):
         return 0.42 - 0.5 * np.cos(2*np.pi*np.arange(N)/(N-1)) + 0.08 * np.cos(4*np.pi*np.arange(N)/(N-1))
 
-setattr(BlackmanGen, 'gen', atom_.blackman_)
-setattr(BlackmanGen, 'genFM', atom_.blackmanFM_)
+setattr(BlackmanGen, 'gen', _atom._blackman)
+setattr(BlackmanGen, 'genFM', _atom._blackmanFM)
 
 class GaborGen(Window, Sinusoid):
 
     def __init__(self):
-        self.type = 'gabor'
+        self.type = b'gabor'
         self.dictionarySdifType = 'XGAB'
         self.dictionaryType = [('type', 'S10'), ('onset', int), ('duration', int), ('omega', float), ('chirp', float)]
         self.bookSdifType = 'XGAM'
@@ -133,13 +133,13 @@ class GaborGen(Window, Sinusoid):
         return np.exp(-( ( np.arange(N) - N/2. )**2) / (2. * ( (alpha * N)**2)))
 
 #the compiled generator    
-setattr(GaborGen, 'gen', atom_.gabor_)
-setattr(GaborGen, 'genFM', atom_.gaborFM_)
+setattr(GaborGen, 'gen', _atom._gabor)
+setattr(GaborGen, 'genFM', _atom._gaborFM)
 
 class GammaGen(Window, Sinusoid):
 
     def __init__(self):
-        self.type = 'gamma' 
+        self.type = b'gamma' 
         self.dictionarySdifType = 'XGMA'
         self.dictionaryType = [('type', 'S10'), ('onset', int), ('duration', int), ('omega', float), ('chirp', float), ('bandwidth', float), ('order', float)]
         self.bookSdifType = 'XGMM'
@@ -170,13 +170,13 @@ class GammaGen(Window, Sinusoid):
         
         return order * np.exp(1./order) * 1./scale
 
-setattr(GammaGen, 'gen', atom_.gamma_)            
-setattr(GammaGen, 'genFM', atom_.gammaFM_)
+setattr(GammaGen, 'gen', _atom._gamma)            
+setattr(GammaGen, 'genFM', _atom._gammaFM)
 
 class FOFGen(Window, Sinusoid):
 
     def __init__(self):
-        self.type = 'FOF'
+        self.type = b'FOF'
         self.dictionarySdifType = 'XFOF'
         self.dictionaryType = [('type', 'S10'), ('onset', int), ('duration', int), ('omega', float), ('chirp', float), ('rise', int), ('decay', int)]
         self.bookSdifType = 'XFOM'
@@ -223,13 +223,13 @@ class FOFGen(Window, Sinusoid):
 
         
 #mixin
-setattr(FOFGen, 'gen', atom_.fof_)
-setattr(FOFGen, 'genFM', atom_.fofFM_)
+setattr(FOFGen, 'gen', _atom._fof)
+setattr(FOFGen, 'genFM', _atom._fofFM)
 
 class DampedGen(Window, Sinusoid):
 
     def __init__(self):
-        self.type = 'damped'
+        self.type = b'damped'
         self.dictionarySdifType = 'XDMP'
         self.dictionaryType = [('type', 'S10'), ('onset', int), ('duration', int), ('omega', float), ('chirp', float), ('damp', float)]
         self.bookSdifType = 'XDMM'
@@ -243,8 +243,8 @@ class DampedGen(Window, Sinusoid):
 
 
 #mixin 
-setattr(DampedGen, 'gen', atom_.damped_)
-setattr(DampedGen, 'genFM', atom_.dampedFM_)
+setattr(DampedGen, 'gen', _atom._damped)
+setattr(DampedGen, 'genFM', _atom._dampedFM)
 
 #Harmonic Types#
 ################
@@ -252,7 +252,7 @@ setattr(DampedGen, 'genFM', atom_.dampedFM_)
 class HarmonicGaborGen(GaborGen, HarmonicSinusoid):
 
     def __init__(self):
-        self.type = 'hGabor'
+        self.type = b'hGabor'
         self.dictionarySdifType = 'XGHB'
         self.dictionaryType = [('type', 'S10'), ('instrument', 'S10'), ('onset', int), ('duration', int), ('omega', float), ('chirp', float), ('k_mag', float), ('k_phase', float), ('pitch', int), ('structure', int), ('component', int)]
         self.bookSdifType = 'XGHM'
@@ -264,7 +264,7 @@ class HarmonicGaborGen(GaborGen, HarmonicSinusoid):
 class HarmonicHannGen(HannGen, HarmonicSinusoid):
 
     def __init__(self):
-        self.type = 'hHann'
+        self.type = b'hHann'
         self.dictionarySdifType = 'XHHB'
         self.dictionaryType = [('type', 'S10'), ('instrument', 'S10'), ('onset', int), ('duration', int), ('omega', float), ('chirp', float), ('k_mag', float), ('k_phase', float), ('pitch', int), ('structure', int), ('component', int)]
         self.bookSdifType = 'XHHM'
@@ -273,12 +273,11 @@ class HarmonicHannGen(HannGen, HarmonicSinusoid):
         self.genargs = ['duration', 'omega', 'chirp']
         self.winargs = []
 
-#Soundgrain#
-############
+
 class SoundgrainGen(object):
 
     def __init__(self):
-        self.type = 'soundgrain'
+        self.type = b'soundgrain'
         self.dictionarySdifType = 'XSGR'
         self.bookSdifType = 'XSGM'
         self.dictionaryType = [('type', 'S10'), ('onset', int), ('duration', int), ('corpus_index', int), ('file_index', int), ('norm', float)]

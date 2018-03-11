@@ -20,6 +20,7 @@ import scipy.linalg as linalg
 import scipy.signal as sig
 import scipy.fftpack as fftpack
 
+
 class Utils(object):
     '''Class for related utilities'''
     

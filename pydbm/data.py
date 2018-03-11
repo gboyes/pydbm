@@ -18,19 +18,18 @@
 import os
 import re
 
-import pysdif
 import numpy as np
 import scipy.linalg as linalg
 import xml.etree.ElementTree as etree 
 
-import pydbm.meta
-import pydbm.utils
+from . import meta
+from . import utils
 
 
 #Class for to obtain and store information related to a particular instrument subspace#
 #######################################################################################
 
-class InstrumentSubspace(pydbm.meta.IO, pydbm.meta.Spectral, pydbm.utils.Utils):
+class InstrumentSubspace(meta.IO, meta.Spectral, utils.Utils):
     '''Class for data related a particular instrument subspace'''
 
     def __init__(self, fs, instrument):
@@ -132,8 +131,8 @@ class InstrumentSubspace(pydbm.meta.IO, pydbm.meta.Spectral, pydbm.utils.Utils):
 
             for omi, om in enumerate(u):
                 b = [np.where(a['omega'] == om)[0] for a in self.envelopes[k]]
-                env['amplitude'][omi] = np.mean(reduce(np.union1d, [self.envelopes[k][i]['amplitude'][b[i]] for i in xrange(len(b))]))
-                env['phase'][omi] = np.mean(reduce(np.union1d, [self.envelopes[k][i]['phase'][b[i]] for i in xrange(len(b))]))
+                env['amplitude'][omi] = np.mean(reduce(np.union1d, [self.envelopes[k][i]['amplitude'][b[i]] for i in range(len(b))]))
+                env['phase'][omi] = np.mean(reduce(np.union1d, [self.envelopes[k][i]['phase'][b[i]] for i in range(len(b))]))
                 env['omega'][omi] = om
 
             self.envelopes[k] = [env]
@@ -180,7 +179,7 @@ class InstrumentSubspace(pydbm.meta.IO, pydbm.meta.Spectral, pydbm.utils.Utils):
                 tmp_a.append([w for w in centroids_a[0:maxK]])
                 tmp_p.append([w for w in centroids_p[0:maxK]])
                 tmp_f.append([w for w in centroids_f[0:maxK]])
-                #tmp_f.append([self.partialFrequencies[key][inds[w]] for w in xrange(total)])
+                #tmp_f.append([self.partialFrequencies[key][inds[w]] for w in range(total)])
 
             self.partialAmplitudes[key] = [item for sublist in tmp_a for item in sublist]
             self.partialPhases[key] = [item for sublist in tmp_p for item in sublist]
@@ -190,21 +189,21 @@ class InstrumentSubspace(pydbm.meta.IO, pydbm.meta.Spectral, pydbm.utils.Utils):
 
 #Sound database and Corpus objects        
 ######################################################################################################
-class SoundDatabase(pydbm.meta.IO):
+class SoundDatabase(meta.IO):
 
     '''A container for Corpus instances'''
 
     def __init__(self):
-        pydbm.meta.IO.__init__(self)
+        meta.IO.__init__(self)
         self.corpora = []
              
     def num(self):
         sum([C.num() for C in self.corpora]) 
 
-class Corpus(pydbm.meta.IO):
+class Corpus(meta.IO):
 
     def __init__(self, directory):
-        pydbm.meta.IO.__init__(self)
+        meta.IO.__init__(self)
         self.directory = directory
         self.soundfiles = {}
 
@@ -310,6 +309,7 @@ class InstrumentSoundgrainCorpus(Corpus):
     def getAllSoundfiles(self, midiinfosdif):
         '''Add all of the sound files in the directory to a Corpus instance'''
 
+        import pysdif
         sdiff = pysdif.SdifFile(midiinfosdif)
         midiinfo = sdiff.get_NVTs()
         midiinfo_ = {}
@@ -347,7 +347,7 @@ class InstrumentSoundgrainCorpus(Corpus):
     def getSoundfiles(self, file_list, midiinfosdif):
         '''Add specific audio files in the directory to a Corpus instance'''
 
-
+        import pysdif
         sdiff = pysdif.SdifFile(midiinfosdif)
         midiinfo = sdiff.get_NVTs()
         midiinfo_ = {}
@@ -385,11 +385,11 @@ class InstrumentSoundgrainCorpus(Corpus):
 #Partial helper classes#
 ########################
 
-class PartialModel(pydbm.meta.IO):
+class PartialModel(meta.IO):
     '''A class which contains a set of partials and methods to treat them from a SDIF file'''
 
     def __init__(self, sdifpath):
-        pydbm.meta.IO.__init__(self)
+        meta.IO.__init__(self)
         self.partialModel = self.sdif2array(sdifpath, ['1TRC'])['1TRC']
         self.getPartials()
 
@@ -417,16 +417,16 @@ class PartialModel(pydbm.meta.IO):
 
         whole = []
 
-        for k in xrange(len(self.partials)):
+        for k in range(len(self.partials)):
 
             a = self.partials[k]
             whole.append([])
 
-            for i in xrange(len(self.partials)):
+            for i in range(len(self.partials)):
                 s = 0.
                 b = self.partials[i]
 
-                for n in xrange(min( [len(a.array['time']), len(b.array['time'])] )):
+                for n in range(min( [len(a.array['time']), len(b.array['time'])] )):
                     s += abs( alpha * (a.array['time'][n]/max_t - b.array['time'][n]/max_t)) + abs( beta * (a.array['frequency'][n]/max_f - b.array['frequency'][n]/max_f))
 
                 whole[k].append(s)
@@ -435,7 +435,7 @@ class PartialModel(pydbm.meta.IO):
 
         return so
 
-class Partial(pydbm.meta.IO):
+class Partial(meta.IO):
     '''A Partial object'''
 
     def __init__(self, index, array): 
@@ -443,7 +443,7 @@ class Partial(pydbm.meta.IO):
         self.array = array
 
 
-class PolygonGroup(pydbm.meta.IO):
+class PolygonGroup(meta.IO):
     '''A container for a set of Polygon instances'''
     
     def __init__(self, sdif_in):
@@ -451,6 +451,7 @@ class PolygonGroup(pydbm.meta.IO):
         self.readSdif(sdif_in)
 
     def readSdif(self, sdif_in):
+        import pysdif
         
         sdif_file = pysdif.SdifFile(sdif_in)
         
@@ -658,11 +659,11 @@ class Score(object):
 
 #Class for a particular sound target (stores metadata)
 ######################################################################################################
-class Target(pydbm.meta.IO):
+class Target(meta.IO):
     '''Class for an analysis target'''
 
     def __init__(self, inpath):
-        pydbm.meta.IO.__init__(self)
+        meta.IO.__init__(self)
         self.inpath = inpath
         self.name = os.path.basename(self.inpath)
         self.format = os.path.splitext(self.name)[1]

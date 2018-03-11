@@ -1,4 +1,8 @@
 .DS_Store
 *~
 *pyc
-#*#
+__pycache__/
+venv/
+pysdif/
+_atom.c
+_atom.so

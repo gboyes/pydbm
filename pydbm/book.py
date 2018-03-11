@@ -19,24 +19,22 @@ import time
 import copy
 
 import numpy as np
+import scipy.io.wavfile as wavfile
 import scipy.linalg as linalg
 import scipy.signal as sig
 import scipy.fftpack as fftpack
 
-import pysdif
-import scikits.audiolab as audiolab
 import numpy.lib.recfunctions as rfn
 
-import pydbm.meta
-import pydbm.utils
+from . import meta
+from . import utils
 
-#TODO: deal with statistics of atoms?  Assume a model is a distribution of elements with mean std etc.
 
-class Book(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
+class Book(meta.Types, meta.Group, utils.Utils):
     '''Time-Frequency synthesis Book'''
 
     def __init__(self, maxnum, dtype, fs):
-        pydbm.meta.Types.__init__(self)
+        meta.Types.__init__(self)
         self.order = 1
         self.sdifType = 'XBOK'
         self.sampleRate = fs
@@ -45,6 +43,7 @@ class Book(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
     def writeSDIF(self, outpath):
         '''Generate an SDIF file from a sequence of decomposition book'''
 
+        import pysdif
         f = pysdif.SdifFile('%s'%outpath, 'w')
         f.add_NVT({'date' : time.asctime(time.localtime()), 'sample rate' : self.sampleRate})
         f.add_frame_type('XBOK', 'XGAM NewXGAM, XFOM NewXFOM, XGMM NewXGMM, XDMM NewXDMM')
@@ -84,7 +83,6 @@ class Book(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
 
         f.close()
 
-                                                                                                                     
     def shift(self, time_shift, omega_shift):
         '''Shift the contents of a Group in time and frequency                                                                     
            time_shift := num. samples to shift                                                                                                                              
@@ -104,21 +102,18 @@ class Book(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
         out = np.zeros(max(self.atoms['duration']) + max(self.atoms['onset']))
         
         if synthtype == 'default':
-
             for a in self.atoms:
                 a_ = self.atomGenTable[a['type']].gen(a['phase'], *[a[arg] for arg in self.atomGenTable[a['type']].genargs])
                 a_ /= linalg.norm(a_)
                 out[a['onset']:a['onset']+a['duration']] += a_ * a['mag']
 
         elif synthtype == 'FM':
-
             for a in self.atoms:
                 a_ = self.atomGenTable[a['type']].genFM(a['phase'], *[a[arg] for arg in self.atomGenTable[a['type']].genargs], **kwargs)
                 a_ /= linalg.norm(a_)
                 out[a['onset']:a['onset']+a['duration']] += a_ * a['mag']
         
         elif synthtype == 'harmonic':
-            
             for a in self.atoms:
                 a_ = self.atomGenTable[a['type']].gen(a['phase'] + a['k_phase'], *[a[arg] for arg in self.atomGenTable[a['type']].genargs], **kwargs)
                 a_ /= linalg.norm(a_)
@@ -198,7 +193,7 @@ class Book(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
                     M_[i, j] = 1
 
         #get valid molecule indices
-        a = [np.array([k for k in xrange(np.shape(M_)[1]) if M_[j][k] == 1]) for j in xrange(np.shape(M_)[0])]
+        a = [np.array([k for k in range(np.shape(M_)[1]) if M_[j][k] == 1]) for j in range(np.shape(M_)[0])]
         La = np.array([])
         Na = []
         
@@ -225,10 +220,10 @@ class Book(pydbm.meta.Types, pydbm.meta.Group, pydbm.utils.Utils):
                 a_ /= linalg.norm(a_)
                 out[self.atoms['onset'][ind]:self.atoms['onset'][ind]+self.atoms['duration'][ind]] += a_ * self.atoms[ind]['mag']
                 
-            audiolab.wavwrite(out, '%s/molecule%i.wav'%(outdir, i), self.sampleRate)
+            wavfile.write('%s/molecule%i.wav'%(outdir, i), self.sampleRate, out)
             allout[0:len(out)] += out 
 
-        audiolab.wavwrite(allout, '%s/all_molecules.wav'%outdir, self.sampleRate)
+        wavfile.write('%s/all_molecules.wav'%outdir, self.sampleRate, allout)
         
 
 #a book of quasi-harmonically related atoms (components of structures)
@@ -237,7 +232,7 @@ class SpectralBook(Book):
     '''A synthesis book with a description of spectral structures'''
 
     def __init__(self, maxnum, dtype, fs):
-        pydbm.meta.Types.__init__(self)
+        meta.Types.__init__(self)
         self.order = 2
         self.sdifType = 'XHBK'
         self.sampleRate = fs
@@ -321,10 +316,10 @@ class SpectralBook(Book):
 
                 out[self.atoms['onset'][q[0]]:self.atoms['onset'][q[0]]+self.atoms['duration'][q[0]]] += self.structSynth(ind)
                 
-            audiolab.wavwrite(out, '%s/molecule%i.wav'%(outdir, i), self.sampleRate)
+            wavfile.write('%s/molecule%i.wav'%(outdir, i), self.sampleRate, out)
             allout[0:len(out)] += out 
 
-        audiolab.wavwrite(allout, '%s/all_molecules.wav'%outdir, self.sampleRate)
+        wavfile.write('%s/all_molecules.wav'%outdir, self.sampleRate, allout)
 
     #visualization
     def pianoroll(self, dsfactor):
@@ -342,11 +337,11 @@ class SpectralBook(Book):
         return out.T
 
             
-class SoundgrainBook(pydbm.meta.Group, pydbm.meta.IO):
+class SoundgrainBook(meta.Group, meta.IO):
 
     def __init__(self, fs, SoundDatabase, maxnum):
 
-        pydbm.meta.IO.__init__(self)
+        meta.IO.__init__(self)
         self.order = 1
         self.sampleRate = fs
         self.SoundDatabase = SoundDatabase
@@ -358,7 +353,7 @@ class SoundgrainBook(pydbm.meta.Group, pydbm.meta.IO):
            
         out = np.zeros(max(self.atoms['onset'] + self.atoms['duration']))
 
-        for i in xrange(len(self.atoms)):
+        for i in range(len(self.atoms)):
             atom = self.readAudio(self.SoundDatabase.corpora[self.atoms['corpus_index'][i]].directory + '/' + self.SoundDatabase.corpora[self.atoms['corpus_index'][i]].soundfiles[self.atoms['file_index'][i]])[0] / self.atoms['norm'][i]
             out[self.atoms['onset'][i] : self.atoms['onset'][i] + self.atoms['duration'][i]] += atom * self.atoms['mag'][i] 
 
@@ -368,6 +363,7 @@ class SoundgrainBook(pydbm.meta.Group, pydbm.meta.IO):
     def writeSDIF(self, outpath, labeled=False):
         '''Generate an sdif from a soundgrain analysis books'''
         
+        import pysdif
         f = pysdif.SdifFile('%s'%outpath, 'w')
         f.add_NVT({'TableName' : 'FileInfo', 'date' : time.asctime(time.localtime()), 'sample rate' : self.sampleRate})
 
@@ -449,7 +445,7 @@ class InstrumentSoundgrainBook(SoundgrainBook):
                     M_[i, j] = 1
 
         #get valid molecule indices
-        a = [np.array([k for k in xrange(np.shape(M_)[1]) if M_[j][k] == 1]) for j in xrange(np.shape(M_)[0])]
+        a = [np.array([k for k in range(np.shape(M_)[1]) if M_[j][k] == 1]) for j in range(np.shape(M_)[0])]
         La = np.array([])
         Na = []
         
@@ -471,6 +467,7 @@ class InstrumentSoundgrainBook(SoundgrainBook):
     def writeSDIF(self, outpath, labeled=True):
         '''Generate an sdif from a soundgrain analysis books'''
         
+        import pysdif
         f = pysdif.SdifFile('%s'%outpath, 'w')
         f.add_NVT({'TableName' : 'FileInfo', 'date' : time.asctime(time.localtime()), 'sample rate' : self.sampleRate})
 
@@ -482,7 +479,6 @@ class InstrumentSoundgrainBook(SoundgrainBook):
             ainds = np.where(self.atoms['corpus_index'] == c)[0]
             finds = self.atoms['file_index'][ainds]
             f.add_NVT(dict([('TableName', 'Corpus-%i'%c)] + zip([str(k) for k in finds], [self.SoundDatabase.corpora[c].soundfiles[k] for k in finds])))
-
 
         f.add_frame_type('XADS', 'XSGM NewXSGM, XSLM NewXSLM')
         self.atoms.sort(order='onset')

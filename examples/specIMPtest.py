@@ -1,17 +1,17 @@
 import numpy as np
 import pydbm.dictionary
-import matplotlib.pyplot as plt
-import scikits.audiolab
+from scipy.io import wavfile
 import time
 
-x, fs, p = scikits.audiolab.wavread('../sounds/harm_fof.wav')
+fs, x = wavfile.read('./sounds/harm_fof.wav')
+x = x / 32768.0 
 
 D = pydbm.dictionary.SpecDictionary(fs)
-D.addNote('hann', 6000, [512], [np.arange(0, len(x)-512, 256)])
+D.addNote(b'hann', 6000, [512], [np.arange(0, len(x)-512, 256)])
 a = time.clock()
-#mod, res, book = D.mp(x, 1000, 35, 10000, 10, -80, 2) 
 mod, res, book = D.mp2(x, 1000, 35, 10000, 10, -80, 2) 
-print(time.clock()-a)
-print(book.num())
+print('Decomposition took {}'.format(time.clock()-a))
+print('Synthesis book contains {} elements'.format(book.num()))
 
-scikits.audiolab.wavwrite(mod, '../sounds/mod.wav', fs)
+wavfile.write('./sounds/spec-test-model.wav', fs, mod)
+wavfile.write('./sounds/spec-test-residual.wav', fs, res)
