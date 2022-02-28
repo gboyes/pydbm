@@ -17,7 +17,8 @@
 
 import numpy as np
 import scipy.fftpack as fftpack
-from .ext._atom import _atom
+
+import atom
 
 
 class Window(object):
@@ -60,7 +61,7 @@ class Sinusoid(object):
         return np.cos(2 * np.pi * omega * np.arange(N) + (depth/omega_m * np.sin(2 * np.pi * omega_m * np.arange(N) + phi_m)) + phi)
 
 
-setattr(Sinusoid, '_realSinusoid', _atom._realSinusoid)
+setattr(Sinusoid, '_realSinusoid', atom._realSinusoid)
 
 class HarmonicSinusoid(Sinusoid):
 
@@ -74,7 +75,7 @@ class HarmonicSinusoid(Sinusoid):
     def realHarmonicSinusoid(self, N, amp_list, omega_list, phi_list, maxnum=1000):
         return sum([amp_list[i] * self._realSinusoid(N, omega_list[i], phi_list[i]) for i in range(min((len(omega_list), maxnum)))])   
 
-setattr(HarmonicSinusoid, '_realSinusoid', _atom._realSinusoid)
+setattr(HarmonicSinusoid, '_realSinusoid', atom._realSinusoid)
 
 
 class HannGen(Window, Sinusoid):
@@ -92,8 +93,8 @@ class HannGen(Window, Sinusoid):
     def window(self, N):
         return 0.5 * (1 - np.cos( 2*np.pi*np.arange(N) / (N-1)))
 
-setattr(HannGen, 'gen', _atom._hann)
-setattr(HannGen, 'genFM', _atom._hannFM)
+setattr(HannGen, 'gen', atom._hann)
+setattr(HannGen, 'genFM', atom._hannFM)
 
 class BlackmanGen(Window, Sinusoid):
 
@@ -110,8 +111,8 @@ class BlackmanGen(Window, Sinusoid):
     def window(self, N):
         return 0.42 - 0.5 * np.cos(2*np.pi*np.arange(N)/(N-1)) + 0.08 * np.cos(4*np.pi*np.arange(N)/(N-1))
 
-setattr(BlackmanGen, 'gen', _atom._blackman)
-setattr(BlackmanGen, 'genFM', _atom._blackmanFM)
+setattr(BlackmanGen, 'gen', atom._blackman)
+setattr(BlackmanGen, 'genFM', atom._blackmanFM)
 
 class GaborGen(Window, Sinusoid):
 
@@ -133,8 +134,8 @@ class GaborGen(Window, Sinusoid):
         return np.exp(-( ( np.arange(N) - N/2. )**2) / (2. * ( (alpha * N)**2)))
 
 #the compiled generator    
-setattr(GaborGen, 'gen', _atom._gabor)
-setattr(GaborGen, 'genFM', _atom._gaborFM)
+setattr(GaborGen, 'gen', atom._gabor)
+setattr(GaborGen, 'genFM', atom._gaborFM)
 
 class GammaGen(Window, Sinusoid):
 
@@ -167,11 +168,10 @@ class GammaGen(Window, Sinusoid):
         '''Return bandwidth as a function of order and scale (norm. freq)
             scale := length of vector
             order := order of function'''
-        
         return order * np.exp(1./order) * 1./scale
 
-setattr(GammaGen, 'gen', _atom._gamma)            
-setattr(GammaGen, 'genFM', _atom._gammaFM)
+setattr(GammaGen, 'gen', atom._gamma)
+setattr(GammaGen, 'genFM', atom._gammaFM)
 
 class FOFGen(Window, Sinusoid):
 
@@ -223,8 +223,8 @@ class FOFGen(Window, Sinusoid):
 
         
 #mixin
-setattr(FOFGen, 'gen', _atom._fof)
-setattr(FOFGen, 'genFM', _atom._fofFM)
+setattr(FOFGen, 'gen', atom._fof)
+setattr(FOFGen, 'genFM', atom._fofFM)
 
 class DampedGen(Window, Sinusoid):
 
@@ -243,8 +243,8 @@ class DampedGen(Window, Sinusoid):
 
 
 #mixin 
-setattr(DampedGen, 'gen', _atom._damped)
-setattr(DampedGen, 'genFM', _atom._dampedFM)
+setattr(DampedGen, 'gen', atom._damped)
+setattr(DampedGen, 'genFM', atom._dampedFM)
 
 #Harmonic Types#
 ################
