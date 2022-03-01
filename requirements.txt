@@ -1,4 +1,5 @@
 Cython
 numpy
 scipy
+pysdif3
 git+https://github.com/gboyes/pydbm-atom
